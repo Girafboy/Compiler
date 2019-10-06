@@ -64,9 +64,8 @@ class PrintStm : public Stm {
 class Exp {
  public:
   Exp(ExpKind kind) : kind(kind) {}
-  // TODO: you'll have to add some definitions here (lab1).
-  // Hints: You may add interfaces like `int MaxArgs()`,
-  //        and ` IntAndTable *Interp(Table *)`
+  virtual int MaxArgs() const = 0; 
+  virtual IntAndTable *Interp(Table *) const = 0;
 
  protected:
   ExpKind kind;
@@ -75,8 +74,8 @@ class Exp {
 class IdExp : public Exp {
  public:
   IdExp(std::string id) : Exp(ID_EXP), id(id) {}
-  // TODO: you'll have to add some definitions here (lab1).
-
+  int MaxArgs() const override;
+  IntAndTable *Interp(Table *) const override;
 
  private:
   std::string id;
@@ -85,7 +84,8 @@ class IdExp : public Exp {
 class NumExp : public Exp {
  public:
   NumExp(int num) : Exp(NUM_EXP), num(num) {}
-  // TODO: you'll have to add some definitions here.
+  int MaxArgs() const override;
+  IntAndTable *Interp(Table *) const override;
 
  private:
   int num;
@@ -95,7 +95,8 @@ class OpExp : public Exp {
  public:
   OpExp(Exp *left, BinOp oper, Exp *right)
       : Exp(OP_EXP), left(left), oper(oper), right(right) {}
-  // TODO: you'll have to add some definitions here (lab1).
+  int MaxArgs() const override;
+  IntAndTable *Interp(Table *) const override;
 
  private:
   Exp *left;
@@ -106,7 +107,8 @@ class OpExp : public Exp {
 class EseqExp : public Exp {
  public:
   EseqExp(Stm *stm, Exp *exp) : Exp(ESEQ_EXP), stm(stm), exp(exp) {}
-  // TODO: you'll have to add some definitions here (lab1).
+  int MaxArgs() const override;
+  IntAndTable *Interp(Table *) const override;
 
  private:
   Stm *stm;
@@ -116,10 +118,10 @@ class EseqExp : public Exp {
 class ExpList {
  public:
   ExpList(ExpListKind kind) : kind(kind) {}
- // TODO: you'll have to add some definitions here (lab1).
- // Hints: You may add interfaces like `int MaxArgs()`, `int NumExps()`,
- //        and ` IntAndTable *Interp(Table *)`
-
+  virtual int MaxArgs() const = 0; 
+  virtual int NumExps() const = 0;
+  virtual IntAndTable *Interp(Table *) const = 0;
+  virtual ExpList *PopOne() const = 0;
 
  protected:
   ExpListKind kind;
@@ -129,7 +131,10 @@ class PairExpList : public ExpList {
  public:
   PairExpList(Exp *head, ExpList *tail)
       : ExpList(PAIR_EXP_LIST), head(head), tail(tail) {}
-  // TODO: you'll have to add some definitions here (lab1).
+  int MaxArgs() const override;
+  int NumExps() const override;
+  IntAndTable *Interp(Table *) const override;
+  ExpList *PopOne() const override;
 
  private:
   Exp *head;
@@ -139,7 +144,10 @@ class PairExpList : public ExpList {
 class LastExpList : public ExpList {
  public:
   LastExpList(Exp *last) : ExpList(LAST_EXP_LIST), last(last) {}
-  // TODO: you'll have to add some definitions here (lab1).
+  int MaxArgs() const override;
+  int NumExps() const override;
+  IntAndTable *Interp(Table *) const override;
+  ExpList *PopOne() const override;
 
  private:
   Exp *last;
