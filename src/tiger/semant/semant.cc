@@ -6,16 +6,6 @@ extern EM::ErrorMsg errormsg;
 using VEnvType = S::Table<E::EnvEntry> *;
 using TEnvType = S::Table<TY::Ty> *;
 
-/*
- * S::Table is defined in tiger/symbol/symbol/h
- * TAB::Table is defined in tiger/util/table.h
- * useful functions:
- *  - void BeginScope()
- *  - void EndScope()
- *  - void Enter(KeyType *key, ValueType *value)
- *  - ValueType *Look(KeyType *key)
- */
-
 namespace {
 	static TY::TyList *make_formal_tylist(TEnvType tenv, A::FieldList *params) {
 		if (params == nullptr) {
@@ -216,20 +206,22 @@ TY::Ty *OpExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
   return TY::IntTy::Instance();
 }
 
-TY::Ty *RecordExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
+TY::Ty *RecordExp::SemAnalyze(VEnvType venv, TEnvType tenv,
+                              int labelcount) const {
   // TODO: Put your codes here (lab4).
-  TY::Ty *ty = tenv->Look(this->typ);
-  if (!ty) {
-    errormsg.Error(this->pos, "undefined type %s", this->typ->Name().c_str());
+  TY::Ty *ty = tenv->Look(typ);
+  if(!ty){
+    errormsg.Error(pos, "undefined type %s", typ->Name().c_str());
     return TY::IntTy::Instance();
   }
+  
   ty = ty->ActualTy();
-  if (ty->kind != TY::Ty::RECORD) {
-    errormsg.Error(this->pos, "undefined type %s", this->typ->Name().c_str());
+  if(!ty){
+    errormsg.Error(pos, "undefined type %s", typ->Name().c_str());
     return TY::IntTy::Instance();
   }
-  if (ty->kind != TY::Ty::RECORD) {
-    errormsg.Error(this->pos, "not record type %s", this->typ->Name().c_str());
+  if(ty->kind != TY::Ty::Kind::RECORD){
+    errormsg.Error(pos, "not record type %s", typ->Name().c_str());
     return TY::IntTy::Instance();
   }
 
@@ -255,7 +247,7 @@ TY::Ty *RecordExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) cons
     return TY::IntTy::Instance();
   }
 
-  return ty;
+  return ty;//->ActualTy();
 }
 
 TY::Ty *SeqExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
@@ -291,11 +283,10 @@ TY::Ty *AssignExp::SemAnalyze(VEnvType venv, TEnvType tenv,
   return var_ty;//->ActualTy();
 }
 
-TY::Ty *IfExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const
-{
+TY::Ty *IfExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
   // TODO: Put your codes here (lab4).
   if (this->test->SemAnalyze(venv, tenv, labelcount)->kind != TY::Ty::INT) {
-    errormsg.Error(this->pos, "Wront type IfExp1");
+    errormsg.Error(this->pos, "integer required");
     return TY::IntTy::Instance();
   }
   TY::Ty *ty = this->then->SemAnalyze(venv, tenv, labelcount);
@@ -370,20 +361,19 @@ TY::Ty *LetExp::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
 }
 
 TY::Ty *ArrayExp::SemAnalyze(VEnvType venv, TEnvType tenv,
-                             int labelcount) const
-{
+                             int labelcount) const {
   // TODO: Put your codes here (lab4).
   TY::Ty *ty = tenv->Look(this->typ)->ActualTy();
   if (ty == nullptr) {
-    errormsg.Error(this->pos, "Wront type ArrayExp1");
+    errormsg.Error(this->pos, "undefined type %s", typ->Name().c_str());
     return TY::VoidTy::Instance();
   }
   if (this->size->SemAnalyze(venv, tenv, labelcount)->kind != TY::Ty::INT) {
-    errormsg.Error(this->pos, "Wront type ArrayExp2");
+    errormsg.Error(this->pos, "undefined type %s", typ->Name().c_str());
     return TY::VoidTy::Instance();
   }
   if (ty->kind != TY::Ty::ARRAY) {
-    errormsg.Error(this->pos, "Wront type ArrayExp3");
+    errormsg.Error(this->pos, "not array type %d %d", ty->kind, TY::Ty::Kind::ARRAY);
     return TY::VoidTy::Instance();
   }
   TY::ArrayTy *arrayTy = (TY::ArrayTy *)ty;
@@ -401,8 +391,7 @@ TY::Ty *VoidExp::SemAnalyze(VEnvType venv, TEnvType tenv,
 }
 
 void FunctionDec::SemAnalyze(VEnvType venv, TEnvType tenv,
-                             int labelcount) const
-{
+                             int labelcount) const {
   // TODO: Put your codes here (lab4).
   for (A::FunDecList *funDecList = this->functions; funDecList != nullptr; funDecList = funDecList->tail) {
     A::FunDec *funDec = funDecList->head;
@@ -414,7 +403,7 @@ void FunctionDec::SemAnalyze(VEnvType venv, TEnvType tenv,
     if (funDec->result != nullptr) {
       result = tenv->Look(funDec->result);
       if (result == nullptr)
-        errormsg.Error(this->pos, "Wront type FuncDec");
+        errormsg.Error(this->pos, "FunctionDec undefined result.");
     }
     else
       result = TY::VoidTy::Instance();
@@ -437,14 +426,13 @@ void FunctionDec::SemAnalyze(VEnvType venv, TEnvType tenv,
       if (decTy->kind == TY::Ty::VOID)
         errormsg.Error(funDec->body->pos, "procedure returns value");
       else
-        errormsg.Error(funDec->body->pos, "Wrong type FuncDec");
+        errormsg.Error(funDec->body->pos, "return type mismatch");
     }
     venv->EndScope();
   }
 }
 
-void VarDec::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const
-{
+void VarDec::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
   // TODO: Put your codes here (lab4).
   if (this->typ == nullptr) {
     TY::Ty *ty = this->init->SemAnalyze(venv, tenv, labelcount);
@@ -465,8 +453,7 @@ void VarDec::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const
   }
 }
 
-void TypeDec::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const
-{
+void TypeDec::SemAnalyze(VEnvType venv, TEnvType tenv, int labelcount) const {
   // TODO: Put your codes here (lab4).
   for (A::NameAndTyList *tyList = this->types; tyList != nullptr; tyList = tyList->tail) {
     for (A::NameAndTyList *temp = tyList->tail; temp != nullptr; temp = temp->tail)
