@@ -43,6 +43,7 @@
 %nonassoc EQ NEQ LT LE GT GE
 %left PLUS MINUS
 %left TIMES DIVIDE
+%right UMINUS
 
 %type <exp> exp expseq
 %type <explist> actuals nonemptyactuals sequencing sequencing_exps
@@ -101,6 +102,7 @@ exp:
   LET decs IN expseq END {$$ = new A::LetExp(errormsg.tokPos, $2, $4);} |
   WHILE exp DO exp {$$ = new A::WhileExp(errormsg.tokPos, $2, $4);} |
   FOR ID ASSIGN exp TO exp DO exp {$$ = new A::ForExp(errormsg.tokPos, $2, $4, $6, $8);} |
+  BREAK {$$ = new A::BreakExp(errormsg.tokPos);} |
   IF exp THEN exp ELSE exp {$$ = new A::IfExp(errormsg.tokPos, $2, $4, $6);} |
   IF exp THEN exp {$$ = new A::IfExp(errormsg.tokPos, $2, $4, NULL);};
 
