@@ -68,7 +68,7 @@ static std::string format(std::string assem, TEMP::TempList* dst,
 void OperInstr::Print(FILE* out, TEMP::Map* m) const {
   std::string result =
       format(this->assem, this->dst, this->src, this->jumps, m);
-  fprintf(out, "%s\n", result.c_str());
+  fprintf(out, "\t%s\n", result.c_str());
 }
 
 void LabelInstr::Print(FILE* out, TEMP::Map* m) const {
@@ -90,7 +90,7 @@ void MoveInstr::Print(FILE* out, TEMP::Map* m) const {
     }
   }
   std::string result = format(this->assem, this->dst, this->src, nullptr, m);
-  fprintf(out, "%s\n", result.c_str());
+  fprintf(out, "\t%s\n", result.c_str());
 }
 
 void InstrList::Print(FILE* out, TEMP::Map* m) const {

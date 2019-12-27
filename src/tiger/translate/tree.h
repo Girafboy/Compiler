@@ -263,6 +263,8 @@ class StmList {
 RelOp notRel(RelOp);  /* a op b    ==     not(a notRel(op) b)  */
 RelOp commute(RelOp); /* a op b    ==    b commute(op) a       */
 
+MemExp *NewMemPlus_Const(Exp *left, int right);
+
 }  // namespace T
 
 #endif  // TIGER_TRANSLATE_TREE_H_

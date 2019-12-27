@@ -2,14 +2,13 @@
 
 namespace RA
 {
+static StackVarList *varlist = new StackVarList(NULL, 0);
+static TEMP::Map *regmap = TEMP::Map::Empty();
 
 Result RegAlloc(F::Frame *f, AS::InstrList *il)
 {
 	// TODO: Put your codes here (lab6).
-	TEMP::Map *regmap = TEMP::Map::Empty();
-	regmap->Enter(F::SP(), new std::string("%rsp"));
 	regmap->Enter(F::RAX(), new std::string("%rax"));
-	regmap->Enter(F::RBP(), new std::string("%rbp"));
 	regmap->Enter(F::RDI(), new std::string("%rdi"));
 	regmap->Enter(F::RSI(), new std::string("%rsi"));
 	regmap->Enter(F::RDX(), new std::string("%rdx"));
@@ -18,21 +17,22 @@ Result RegAlloc(F::Frame *f, AS::InstrList *il)
 	regmap->Enter(F::R9(), new std::string("%r9"));
 	regmap->Enter(F::R10(), new std::string("%r10"));
 	regmap->Enter(F::R11(), new std::string("%r11"));
+	regmap->Enter(F::RBX(), new std::string("%rbx"));
+	regmap->Enter(F::RBP(), new std::string("%rbp"));
 	regmap->Enter(F::R12(), new std::string("%r12"));
 	regmap->Enter(F::R13(), new std::string("%r13"));
 	regmap->Enter(F::R14(), new std::string("%r14"));
 	regmap->Enter(F::R15(), new std::string("%r15"));
+	regmap->Enter(F::SP(), new std::string("%rsp"));
 	TEMP::Map *destmap = TEMP::Map::Empty();
-	AS::InstrList *root = il;
-	StackVarList *varlist = NULL;
-	AS::InstrList *cur = root;
+	AS::InstrList *cur = il->tail;
 	while (cur){
-		mapMapping(f, &root, cur, varlist, destmap, regmap);
+		mapMapping(il, cur, f, destmap);
 		cur = cur->tail;
 	}
 
 	TEMP::Map *resmap = TEMP::Map::LayerMap(regmap, destmap);
-	return Result(resmap, root);
+	return Result(resmap, il);
 }
 
 AS::InstrList *StrongSplice(AS::InstrList *il, AS::Instr *i)
@@ -44,138 +44,118 @@ AS::InstrList *StrongSplice(AS::InstrList *il, AS::Instr *i)
 	return il;
 }
 
-AS::InstrList *mapMapping(F::Frame *f, AS::InstrList **root, AS::InstrList *il, StackVarList *&varlist, TEMP::Map *destmap, TEMP::Map *regmap)
-{
+AS::InstrList *fprefetch(TEMP::TempList *templist, F::Frame *frame, TEMP::Map *destmap){
 	static char str[256];
-	AS::InstrList *tail = il->tail;
-	TEMP::TempList *tempList_src;
-	TEMP::TempList *tempList_dst;
-	AS::InstrList *prefetch = NULL;
-	AS::InstrList *restore = NULL;
-	TEMP::Temp *temp = NULL;
-	TEMP::Temp *newtemp = NULL;
 
 	int count = 0;
-	int offset = 0;
-	switch (il->head->kind)
-	{
-	case AS::Instr::OPER:
-	{
-		AS::OperInstr *operIns = (AS::OperInstr *)il->head;
-		tempList_src = operIns->src;
-		tempList_dst = operIns->dst;
-		break;
-	}
-	case AS::Instr::MOVE:
-	{
-		AS::MoveInstr *moveIns = (AS::MoveInstr *)il->head;
-		tempList_src = moveIns->src;
-		tempList_dst = moveIns->dst;
-		break;
-	}
-	default:
-		return NULL;
-	}
+	AS::InstrList *prefetch = NULL;
 
-	TEMP::TempList *tempList = tempList_src;
-	while (tempList && tempList->head){
-		temp = tempList->head;
+	for(; templist && templist->head; templist = templist->tail){
+		TEMP::Temp *temp = templist->head;
 		if (!regmap->Look(temp)){
-			offset = StackVarList::get(varlist, tempList->head);
+			int offset = varlist->get(temp);
 			if (!offset)
-				offset = StackVarList::set(varlist, tempList->head, f);
+				offset = varlist->set(temp, frame);
 			else{
-				newtemp = TEMP::Temp::NewTemp();
-				tempList->head = newtemp;
-				offset = StackVarList::set(varlist, newtemp, f, offset);
+				TEMP::Temp *newtemp = TEMP::Temp::NewTemp();
+				templist->head = newtemp;
+				offset = varlist->set(newtemp, frame, offset);
 			}
 			if (!count){
-				sprintf(str, "\tmovq -%d(%%rbp), %%r10\n", offset);
-				destmap->Enter(tempList->head, new std::string("%r10"));
+				sprintf(str, "movq -%d(%%rbp), %%r10", offset);
+				destmap->Enter(templist->head, new std::string("%r10"));
 			}else if (count == 1){
-				sprintf(str, "\tmovq -%d(%%rbp), %%r11\n", offset);
-				destmap->Enter(tempList->head, new std::string("%r11"));
+				sprintf(str, "movq -%d(%%rbp), %%r11", offset);
+				destmap->Enter(templist->head, new std::string("%r11"));
 			}
 			prefetch = StrongSplice(prefetch, new AS::MoveInstr(str, NULL, NULL));
 			count++;
 		}
+	}
+	return prefetch;
+}
 
-		tempList = tempList->tail;
+AS::InstrList *frestore(TEMP::TempList *templist, F::Frame *frame, TEMP::Map *destmap){
+	static char str[256];
+
+	int count = 0;
+	AS::InstrList *restore = NULL;
+
+	for(; templist && templist->head; templist = templist->tail){
+		TEMP::Temp *temp = templist->head;
+		if (regmap->Look(temp))
+			continue;
+
+		int offset = varlist->get(temp);
+		if (!offset)
+			offset = varlist->set(temp, frame);
+		else{
+			TEMP::Temp *newtemp = TEMP::Temp::NewTemp();
+			templist->head = newtemp;
+			offset = varlist->set(newtemp, frame, offset);
+		}
+		if (!count){
+			sprintf(str, "movq %%r12, -%d(%%rbp)", offset);
+			destmap->Enter(templist->head, new std::string("%r12"));
+		}
+		else if (count == 1){
+			sprintf(str, "movq %%r13, -%d(%%rbp)", offset);
+			destmap->Enter(templist->head, new std::string("%r13"));
+		}
+		restore = StrongSplice(restore, new AS::MoveInstr(str, NULL, NULL));
+		count++;
+	}
+	return restore;
+}
+
+AS::InstrList *mapMapping(AS::InstrList *il, AS::InstrList *cur, F::Frame *frame, TEMP::Map *destmap)
+{
+	TEMP::TempList *tempList_src;
+	TEMP::TempList *tempList_dst;
+	switch (cur->head->kind){
+		case AS::Instr::OPER:
+			tempList_src = ((AS::OperInstr *)cur->head)->src;
+			tempList_dst = ((AS::OperInstr *)cur->head)->dst;
+			break;
+		case AS::Instr::MOVE:
+			tempList_src = ((AS::MoveInstr *)cur->head)->src;
+			tempList_dst = ((AS::MoveInstr *)cur->head)->dst;
+			break;
 	}
 
-	tempList = tempList_dst;
-	count = 0;
-	while (tempList && tempList->head){
-		temp = tempList->head;
-		if (!regmap->Look(temp)){
-			offset = StackVarList::get(varlist, tempList->head);
-			if (!offset)
-				offset = StackVarList::set(varlist, tempList->head, f);
-			else{
-				newtemp = TEMP::Temp::NewTemp();
-				tempList->head = newtemp;
-				offset = StackVarList::set(varlist, newtemp, f, offset);
-			}
-			if (!count){
-				sprintf(str, "\tmovq %%r12, -%d(%%rbp)\n", offset);
-				destmap->Enter(tempList->head, new std::string("%r12"));
-			}
-			else if (count == 1){
-				sprintf(str, "\tmovq %%r13, -%d(%%rbp)\n", offset);
-				destmap->Enter(tempList->head, new std::string("%r13"));
-			}
-			restore = StrongSplice(restore, new AS::MoveInstr(str, NULL, NULL));
-			count++;
-		}
-		tempList = tempList->tail;
+	while (il && il->tail != cur)
+		il = il->tail;
+	AS::InstrList *prefetch = fprefetch(tempList_src, frame, destmap);
+	if (prefetch){
+		il->tail = prefetch;
+		AS::InstrList::Splice(prefetch, cur);
 	}
 
-	AS::InstrList *last_il;
-	if (*root == il)
-		last_il = NULL;
-	else{
-		last_il = *root;
-		while (last_il && last_il->tail != il)
-			last_il = last_il->tail;
-	}
-
-	if (last_il){
-		if (prefetch){
-			last_il->tail = prefetch;
-			AS::InstrList::Splice(prefetch, il);
-		}
-		if (restore){
-			il->tail = restore;
-			AS::InstrList::Splice(restore, tail);
-		}
+	AS::InstrList *restore = frestore(tempList_dst, frame, destmap);
+	if (restore){
+		AS::InstrList::Splice(restore, cur->tail);
+		cur->tail = restore;
 	}
 }
 
-int StackVarList::get(StackVarList *root, TEMP::Temp *t)
+int StackVarList::get(TEMP::Temp *t)
 {
-	StackVarList *cur = root;
+	StackVarList *cur = this->next;
 	while (cur && cur->tmp != t)
 		cur = cur->next;
-	if (cur){
-		assert(cur->tmp == t);
+	if (cur)
 		return cur->offset;
-	}
-	else
-		return 0;
+	return 0;
 }
 
-int StackVarList::set(StackVarList *&root, TEMP::Temp *t, F::Frame *f, int off)
+int StackVarList::set(TEMP::Temp *t, F::Frame *f, int off)
 {
 	if (!off){
 		f->s_offset -= F::wordsize;
 		off = -f->s_offset;
 	}
 
-	StackVarList *cur = root;
-	if (!cur){
-		root = new StackVarList(t, off);
-		return off;
-	}
+	StackVarList *cur = this;
 	while (cur->next)
 		cur = cur->next;
 	cur->next = new StackVarList(t, off);

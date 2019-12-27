@@ -6,124 +6,41 @@ namespace F {
 
 const int wordsize = 8;
 
-class InFrameAccess : public Access {
- public:
-  int offset;
-
-  InFrameAccess(int offset) : Access(INFRAME), offset(offset) {assert(offset < 0);}
-  T::Exp *ToExp(T::Exp *framePtr) const
-  {
-    return new T::MemExp(new T::BinopExp(T::BinOp::PLUS_OP, framePtr, new T::ConstExp(offset)));
-  }
-};
-
-class InRegAccess : public Access {
- public:
-  TEMP::Temp* reg;
-
-  InRegAccess(TEMP::Temp* reg) : Access(INREG), reg(reg) {}
-  T::Exp *ToExp(T::Exp *framePtr) const
-  {
-    return new T::TempExp(reg);
-  }
-};
-
 X64Frame::X64Frame(TEMP::Label *name, U::BoolList *escapes) : Frame(name, escapes)
 {
-  AccessList *formals = new AccessList(NULL, NULL);
+  this->formals = new AccessList(NULL, NULL);
   AccessList *ftail = formals;
-  T::StmList *view_shift = new T::StmList(NULL, NULL);
+  this->view_shift = new T::StmList(NULL, NULL);
   T::StmList *vtail = view_shift;
 
-  int frame_offset = -8;
+  this->s_offset = -8;
   int formal_offset = wordsize;
   int num = 1;
   for(; escapes; escapes = escapes->tail, num++){
     if(escapes->head){
-      switch(num){
-        case 1:
-          vtail->tail = new T::StmList(new T::MoveStm(new T::MemExp(new T::ConstExp(-num*wordsize)), new T::TempExp(RDI())), NULL);
-          ftail->tail = new AccessList(new InFrameAccess(-num*wordsize), NULL);
-          frame_offset -= wordsize;
-          ftail = ftail->tail;
-          vtail = vtail->tail;
-          break;
-        case 2:
-          vtail->tail = new T::StmList(new T::MoveStm(new T::MemExp(new T::ConstExp(-num*wordsize)), new T::TempExp(RSI())), NULL);
-          ftail->tail = new AccessList(new InFrameAccess(-num*wordsize), NULL);
-          frame_offset -= wordsize;
-          ftail = ftail->tail;
-          vtail = vtail->tail;
-          break;
-        case 3:
-          vtail->tail = new T::StmList(new T::MoveStm(new T::MemExp(new T::ConstExp(-num*wordsize)), new T::TempExp(RDX())), NULL);
-          ftail->tail = new AccessList(new InFrameAccess(-num*wordsize), NULL);
-          frame_offset -= wordsize;
-          ftail = ftail->tail;
-          vtail = vtail->tail;
-          break;
-        case 4:
-          vtail->tail = new T::StmList(new T::MoveStm(new T::MemExp(new T::ConstExp(-num*wordsize)), new T::TempExp(RCX())), NULL);
-          ftail->tail = new AccessList(new InFrameAccess(-num*wordsize), NULL);
-          frame_offset -= wordsize;
-          ftail = ftail->tail;
-          vtail = vtail->tail;
-          break;
-        case 5:
-          vtail->tail = new T::StmList(new T::MoveStm(new T::MemExp(new T::ConstExp(-num*wordsize)), new T::TempExp(R8())), NULL);
-          ftail->tail = new AccessList(new InFrameAccess(-num*wordsize), NULL);
-          frame_offset -= wordsize;
-          ftail = ftail->tail;
-          vtail = vtail->tail;
-          break;
-        case 6:
-          vtail->tail = new T::StmList(new T::MoveStm(new T::MemExp(new T::ConstExp(-num*wordsize)), new T::TempExp(R9())), NULL);
-          ftail->tail = new AccessList(new InFrameAccess(-num*wordsize), NULL);
-          frame_offset -= wordsize;
-          ftail = ftail->tail;
-          vtail = vtail->tail;
-          break;
-        default:
-          ftail->tail = new AccessList(new InFrameAccess(formal_offset), NULL);
-          formal_offset += wordsize;
-          ftail = ftail->tail;
-          break;
+      if(ARG_nth(num)){
+        ftail->tail = new AccessList(new InFrameAccess(s_offset), NULL);
+        vtail->tail = new T::StmList(new T::MoveStm(T::NewMemPlus_Const(new T::TempExp(FP()), s_offset), new T::TempExp(ARG_nth(num))), NULL);
+        s_offset -= wordsize;
+        ftail = ftail->tail;
+        vtail = vtail->tail;
+      } else {
+        ftail->tail = new AccessList(new InFrameAccess(formal_offset), NULL);
+        formal_offset += wordsize;
+        ftail = ftail->tail;
       }
     } else {
       TEMP::Temp *temp = TEMP::Temp::NewTemp();
-      switch(num){
-        case 1:
-          view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(RDI())), view_shift);
-          break;
-        case 2:
-          view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(RSI())), view_shift);
-          break;
-        case 3:
-          view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(RDX())), view_shift);
-          break;
-        case 4:
-          view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(RCX())), view_shift);
-          break;
-        case 5:
-          view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(R8())), view_shift);
-          break;
-        case 6:
-          view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(R9())), view_shift);
-          break;
-        default:
-          printf("Frame: the 7-nth formal should be passed on frame.");
-      }
+      if(ARG_nth(num))
+        view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(ARG_nth(num))), view_shift);
+      else
+        printf("Frame: the 7-nth formal should be passed on frame.");
       formals = new AccessList(new InRegAccess(temp), formals);
     }
   }
   
   formals = formals->tail;
   view_shift = view_shift->tail;
-  
-  this->s_offset = frame_offset;
-  this->formals = formals;
-  this->locals = NULL;
-  this->view_shift = view_shift;
 }
 
 Access *X64Frame::allocLocal(bool escape)
@@ -169,9 +86,19 @@ AS::InstrList *F_procEntryExit2(AS::InstrList *body)
 
 AS::Proc * F_procEntryExit3(F::Frame * frame, AS::InstrList * body){
   // fix size! TODO:change fixsize 0x10000
-  std::string prolog = "pushq %rbp\nmovq %rsp, %rbp\nsubq $0x10000,%rsp\n";
-  std::string epilog = "\taddq $0x10000,%rsp\n\tpopq %rbp\n\tpopq %r15\n\tret\n";
-  return new AS::Proc("",body,epilog);
+  std::string prolog = frame->label->Name();
+  prolog.append(std::string(":\n.set "));
+  prolog.append(frame->label->Name());
+  prolog.append(std::string("_framesize,$0x10000\n"   \
+                            "\tpushq %rcx\n"          \
+                            "\tpushq %rbp\n"          \
+                            "\tmovq %rsp, %rbp\n"     \
+                            "\tsubq $0x10000, %rsp\n"));
+  std::string epilog =  "\taddq $0x10000,%rsp\n"  \
+                        "\tpopq %rbp\n"           \
+                        "\tpopq %rcx\n"           \
+                        "\tret\n";
+  return new AS::Proc(prolog, body, epilog);
 }
 
 TEMP::Temp *FP()
@@ -281,6 +208,19 @@ TEMP::Temp *SP()
   if(!rsp)
     rsp = TEMP::Temp::NewTemp();
   return rsp;
+}
+
+TEMP::Temp *ARG_nth(int num)
+{
+  switch (num) {
+    case 1: return F::RDI(); 
+    case 2: return F::RSI(); 
+    case 3: return F::RDX(); 
+    case 4: return F::RCX(); 
+    case 5: return F::R8();
+    case 6: return F::R9();
+    default: return NULL;
+  }
 }
 
 }  // namespace F

@@ -20,15 +20,17 @@ public:
 	TEMP::Temp *tmp;
 	int offset;
 	StackVarList *next;
+
 	StackVarList(TEMP::Temp *t, int off, StackVarList *li = NULL) : tmp(t), offset(off), next(li) {}
-	static int get(StackVarList *root, TEMP::Temp *t);
-	static int set(StackVarList *&root, TEMP::Temp *t, F::Frame *f, int off = 0);
+
+	int get(TEMP::Temp *t);
+	int set(TEMP::Temp *t, F::Frame *f, int off = 0);
 };
 
 
 Result RegAlloc(F::Frame* f, AS::InstrList* il);
 AS::InstrList *StrongSplice(AS::InstrList *il, AS::Instr *i);
-AS::InstrList *mapMapping(F::Frame *f, AS::InstrList **root, AS::InstrList *il, StackVarList *&varlist, TEMP::Map *destmap, TEMP::Map *regmap);
+AS::InstrList *mapMapping(AS::InstrList *il, AS::InstrList *cur, F::Frame *f, TEMP::Map *destmap);
 
 }  // namespace RA
 

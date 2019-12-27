@@ -52,6 +52,22 @@ class Access {
   virtual T::Exp *ToExp(T::Exp *framePtr) const = 0;
 };
 
+class InFrameAccess : public Access {
+ public:
+  int offset;
+
+  InFrameAccess(int offset) : Access(INFRAME), offset(offset) {assert(offset < 0);}
+  T::Exp *ToExp(T::Exp *framePtr) const { return T::NewMemPlus_Const(framePtr, offset); }
+};
+
+class InRegAccess : public Access {
+ public:
+  TEMP::Temp* reg;
+
+  InRegAccess(TEMP::Temp* reg) : Access(INREG), reg(reg) {}
+  T::Exp *ToExp(T::Exp *framePtr) const { return new T::TempExp(reg); }
+};
+
 class AccessList {
  public:
   Access *head;
@@ -123,8 +139,6 @@ static TEMP::Temp *r15 = NULL;
 static TEMP::Temp *fp = NULL;
 static TEMP::Temp *rsp = NULL;
 
-TEMP::Temp *FP();
-TEMP::Temp *RV();
 TEMP::Temp *RAX();
 TEMP::Temp *RDI();
 TEMP::Temp *RSI();
@@ -134,14 +148,20 @@ TEMP::Temp *R8();
 TEMP::Temp *R9();
 TEMP::Temp *R10();
 TEMP::Temp *R11();
+
 TEMP::Temp *RBX();
 TEMP::Temp *RBP();
 TEMP::Temp *R12();
 TEMP::Temp *R13();
 TEMP::Temp *R14();
 TEMP::Temp *R15();
+
+TEMP::Temp *FP();
 TEMP::Temp *SP();
 
+TEMP::Temp *RV();
+
+TEMP::Temp *ARG_nth(int num);
 }  // namespace F
 
 #endif
