@@ -13,6 +13,8 @@
 #include "tiger/regalloc/regalloc.h"
 #include "tiger/translate/tree.h"
 
+FILE *debug_log;
+
 extern EM::ErrorMsg errormsg;
 
 A::Exp* absyn_root;
@@ -22,36 +24,57 @@ namespace {
 
 TEMP::Map* temp_map;
 
+void init_regmap(TEMP::Map *regmap)
+{
+  regmap->Enter(F::RAX(), new std::string("%rax"));
+	regmap->Enter(F::RDI(), new std::string("%rdi"));
+	regmap->Enter(F::RSI(), new std::string("%rsi"));
+	regmap->Enter(F::RDX(), new std::string("%rdx"));
+	regmap->Enter(F::RCX(), new std::string("%rcx"));
+	regmap->Enter(F::R8(), new std::string("%r8"));
+	regmap->Enter(F::R9(), new std::string("%r9"));
+	regmap->Enter(F::R10(), new std::string("%r10"));
+	regmap->Enter(F::R11(), new std::string("%r11"));
+	regmap->Enter(F::RBX(), new std::string("%rbx"));
+	regmap->Enter(F::RBP(), new std::string("%rbp"));
+	regmap->Enter(F::R12(), new std::string("%r12"));
+	regmap->Enter(F::R13(), new std::string("%r13"));
+	regmap->Enter(F::R14(), new std::string("%r14"));
+	regmap->Enter(F::R15(), new std::string("%r15"));
+	regmap->Enter(F::SP(), new std::string("%rsp"));
+}
 void do_proc(FILE* out, F::ProcFrag* procFrag) {
+  static TEMP::Map *regmap = TEMP::Map::Empty();
+  init_regmap(regmap);
+
   temp_map = TEMP::Map::Empty();
   // Init temp_map
-
-  //  printf("doProc for function %s:\n", this->frame->label->Name().c_str());
-  //  (new T::StmList(proc->body, nullptr))->Print(stdout);
-  //  printf("-------====IR tree=====-----\n");
+  fprintf(debug_log, "doProc for function %s:\n", procFrag->frame->label->Name().c_str());
+  // (new T::StmList(procFrag->body, NULL))->Print(debug_log);
+  // fprintf(debug_log, "-------====IR tree=====-----\n");
 
   T::StmList* stmList = C::Linearize(procFrag->body);
-  //  stmList->Print(stdout);
-  //  printf("-------====Linearlized=====-----\n");  /* 8 */
+  // stmList->Print(debug_log);
+  // fprintf(debug_log, "-------====Linearlized=====-----\n");  /* 8 */
   struct C::Block blo = C::BasicBlocks(stmList);
-  //  C::StmListList* stmLists = blo.stmLists;
-  //  for (; stmLists; stmLists = stmLists->tail) {
-  //  	stmLists->head->Print(stdout);
-  // 	printf("------====Basic block=====-------\n");
-  //  }
+  // C::StmListList* stmLists = blo.stmLists;
+  // for (; stmLists; stmLists = stmLists->tail) {
+  //  	stmLists->head->Print(debug_log);
+  // 	fprintf(debug_log, "------====Basic block=====-------\n");
+  // }
   stmList = C::TraceSchedule(blo);
-  //  stmList->Print(stdout);
-  //  printf("-------====trace=====-----\n");
+  // stmList->Print(debug_log);
+  // fprintf(debug_log, "-------====trace=====-----\n");
 
   // lab5&lab6: code generation
   AS::InstrList* iList = CG::Codegen(procFrag->frame, stmList); /* 9 */
-  //  AS_printInstrList(stdout, iList, Temp::Map::LayerMap(temp_map,
-  //  Temp_name()));
+  iList->Print(debug_log, TEMP::Map::LayerMap(regmap, TEMP::Map::Name()));
+  fprintf(debug_log, "----======before RA=======-----\n");
 
   // lab6: register allocation
-  //  printf("----======before RA=======-----\n");
   RA::Result allocation = RA::RegAlloc(procFrag->frame, iList); /* 11 */
-  //  printf("----======after RA=======-----\n");
+  // iList->Print(debug_log, allocation.coloring);
+  // fprintf(debug_log, "----======after RA=======-----\n");
 
   AS::Proc* proc = F::F_procEntryExit3(procFrag->frame, allocation.il);
 
@@ -106,6 +129,7 @@ int main(int argc, char** argv) {
 
   if (!absyn_root) return 1;
 
+
   // Lab 6: escape analysis
   // If you have implemented escape analysis, uncomment this
   // ESC::FindEscape(absyn_root); /* set varDec's escape field */
@@ -117,7 +141,8 @@ int main(int argc, char** argv) {
   /* convert the filename */
   sprintf(outfile, "%s.s", argv[1]);
   out = fopen(outfile, "w");
-
+  debug_log = fopen("main.log", "a+");
+  fprintf(debug_log, "testcase %s %s\n", argv[0], argv[1]);
   fprintf(out, ".text\n");
   for (F::FragList* fragList = frags; fragList; fragList = fragList->tail)
     if (fragList->head->kind == F::Frag::Kind::PROC) {
@@ -131,5 +156,6 @@ int main(int argc, char** argv) {
     }
 
   fclose(out);
+  fclose(debug_log);
   return 0;
 }

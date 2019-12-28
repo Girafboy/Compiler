@@ -8,39 +8,39 @@ const int wordsize = 8;
 
 X64Frame::X64Frame(TEMP::Label *name, U::BoolList *escapes) : Frame(name, escapes)
 {
-  this->formals = new AccessList(NULL, NULL);
-  AccessList *ftail = formals;
-  this->view_shift = new T::StmList(NULL, NULL);
-  T::StmList *vtail = view_shift;
+  // this->formals = new AccessList(NULL, NULL);
+  // AccessList *ftail = formals;
+  // this->view_shift = new T::StmList(NULL, NULL);
+  // T::StmList *vtail = view_shift;
 
   this->s_offset = -8;
-  int formal_offset = wordsize;
-  int num = 1;
-  for(; escapes; escapes = escapes->tail, num++){
-    if(escapes->head){
-      if(ARG_nth(num)){
-        ftail->tail = new AccessList(new InFrameAccess(s_offset), NULL);
-        vtail->tail = new T::StmList(new T::MoveStm(T::NewMemPlus_Const(new T::TempExp(FP()), s_offset), new T::TempExp(ARG_nth(num))), NULL);
-        s_offset -= wordsize;
-        ftail = ftail->tail;
-        vtail = vtail->tail;
-      } else {
-        ftail->tail = new AccessList(new InFrameAccess(formal_offset), NULL);
-        formal_offset += wordsize;
-        ftail = ftail->tail;
-      }
-    } else {
-      TEMP::Temp *temp = TEMP::Temp::NewTemp();
-      if(ARG_nth(num))
-        view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(ARG_nth(num))), view_shift);
-      else
-        printf("Frame: the 7-nth formal should be passed on frame.");
-      formals = new AccessList(new InRegAccess(temp), formals);
-    }
-  }
+  // int formal_offset = wordsize;
+  // int num = 1;
+  // for(; escapes; escapes = escapes->tail, num++){
+  //   if(escapes->head){
+  //     if(ARG_nth(num)){
+  //       ftail->tail = new AccessList(new InFrameAccess(s_offset), NULL);
+  //       vtail->tail = new T::StmList(new T::MoveStm(T::NewMemPlus_Const(new T::TempExp(FP()), s_offset), new T::TempExp(ARG_nth(num))), NULL);
+  //       s_offset -= wordsize;
+  //       ftail = ftail->tail;
+  //       vtail = vtail->tail;
+  //     } else {
+  //       ftail->tail = new AccessList(new InFrameAccess(formal_offset), NULL);
+  //       formal_offset += wordsize;
+  //       ftail = ftail->tail;
+  //     }
+  //   } else {
+  //     TEMP::Temp *temp = TEMP::Temp::NewTemp();
+  //     if(ARG_nth(num))
+  //       view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(ARG_nth(num))), view_shift);
+  //     else
+  //       printf("Frame: the 7-nth formal should be passed on frame.");
+  //     formals = new AccessList(new InRegAccess(temp), formals);
+  //   }
+  // }
   
-  formals = formals->tail;
-  view_shift = view_shift->tail;
+  // formals = formals->tail;
+  // view_shift = view_shift->tail;
 }
 
 Access *X64Frame::allocLocal(bool escape)

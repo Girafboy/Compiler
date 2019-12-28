@@ -36,22 +36,22 @@ static void saveCalleeRegs()
   saved_r13 = TEMP::Temp::NewTemp();
   saved_r14 = TEMP::Temp::NewTemp();
   saved_r15 = TEMP::Temp::NewTemp();
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(saved_rbx, NULL), new TEMP::TempList(F::RBX(), NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(saved_rbp, NULL), new TEMP::TempList(F::RBP(), NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(saved_r12, NULL), new TEMP::TempList(F::R12(), NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(saved_r13, NULL), new TEMP::TempList(F::R13(), NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(saved_r14, NULL), new TEMP::TempList(F::R14(), NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(saved_r15, NULL), new TEMP::TempList(F::R15(), NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rbx, NULL), new TEMP::TempList(F::RBX(), NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rbp, NULL), new TEMP::TempList(F::RBP(), NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r12, NULL), new TEMP::TempList(F::R12(), NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r13, NULL), new TEMP::TempList(F::R13(), NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r14, NULL), new TEMP::TempList(F::R14(), NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r15, NULL), new TEMP::TempList(F::R15(), NULL)));
 }
 
 static void restoreCalleeRegs()
 {
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::RBX(), NULL), new TEMP::TempList(saved_rbx, NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::RBP(), NULL), new TEMP::TempList(saved_rbp, NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::R12(), NULL), new TEMP::TempList(saved_r12, NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::R13(), NULL), new TEMP::TempList(saved_r13, NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::R14(), NULL), new TEMP::TempList(saved_r14, NULL)));
-  emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::R15(), NULL), new TEMP::TempList(saved_r15, NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RBX(), NULL), new TEMP::TempList(saved_rbx, NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RBP(), NULL), new TEMP::TempList(saved_rbp, NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R12(), NULL), new TEMP::TempList(saved_r12, NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R13(), NULL), new TEMP::TempList(saved_r13, NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R14(), NULL), new TEMP::TempList(saved_r14, NULL)));
+  emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R15(), NULL), new TEMP::TempList(saved_r15, NULL)));
 }
 
 void emit(AS::Instr * instr){
@@ -69,16 +69,15 @@ void munchStm(T::Stm *stm)
       T::MoveStm *s = (T::MoveStm *)stm;
       if(s->dst->kind == T::Exp::Kind::TEMP){
         TEMP::Temp *left = munchExp(s->src);
-        emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(((T::TempExp *)s->dst)->temp, NULL), new TEMP::TempList(left, NULL)));
+        emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(((T::TempExp *)s->dst)->temp, NULL), new TEMP::TempList(left, NULL)));
         return;
       }
       if(s->dst->kind == T::Exp::Kind::MEM){
         TEMP::Temp *left = munchExp(s->src);
         TEMP::Temp *right = munchExp(((T::MemExp *)s->dst)->exp);
-        emit(new AS::OperInstr("movq `s0,(`s1)", NULL, new TEMP::TempList(left, new TEMP::TempList(right, NULL)), new AS::Targets(NULL)));
+        emit(new AS::OperInstr("movq `s0, (`s1)", NULL, new TEMP::TempList(left, new TEMP::TempList(right, NULL)), NULL));
         return;
       }
-      printf("Wrong T_MOVE stm.");
       break;
     }
     case T::Stm::Kind::LABEL:
@@ -98,7 +97,7 @@ void munchStm(T::Stm *stm)
       T::CjumpStm *s = (T::CjumpStm *)stm;
       TEMP::Temp *left = munchExp(s->left);
       TEMP::Temp *right = munchExp(s->right);
-      emit(new AS::OperInstr("cmp `s0,`s1", NULL, new TEMP::TempList(right, new TEMP::TempList(left, NULL)), new AS::Targets(NULL)));
+      emit(new AS::OperInstr("cmp `s0, `s1", NULL, new TEMP::TempList(right, new TEMP::TempList(left, NULL)), NULL));
 
       std::string str;
       switch(s->op){
@@ -137,7 +136,7 @@ TEMP::Temp *munchExp(T::Exp *exp)
       TEMP::Temp *left = munchExp(e->left);
       TEMP::Temp *right = munchExp(e->right);
       emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(left, NULL)));
-      emit(new AS::OperInstr("addq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(right, new TEMP::TempList(reg, NULL)), new AS::Targets(NULL)));
+      emit(new AS::OperInstr("addq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(right, new TEMP::TempList(reg, NULL)), NULL));
       return reg;
     }
     case T::MINUS_OP:
@@ -145,7 +144,7 @@ TEMP::Temp *munchExp(T::Exp *exp)
       TEMP::Temp *left = munchExp(e->left);
       TEMP::Temp *right = munchExp(e->right);
       emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(left, NULL)));
-      emit(new AS::OperInstr("subq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(right, new TEMP::TempList(reg, NULL)), new AS::Targets(NULL)));
+      emit(new AS::OperInstr("subq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(right, new TEMP::TempList(reg, NULL)), NULL));
       return reg;
     }
     case T::MUL_OP:
@@ -153,7 +152,7 @@ TEMP::Temp *munchExp(T::Exp *exp)
       TEMP::Temp *left = munchExp(e->left);
       TEMP::Temp *right = munchExp(e->right);
       emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(left, NULL)));
-      emit(new AS::OperInstr("imulq `s0,`d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(right, new TEMP::TempList(reg, NULL)), new AS::Targets(NULL)));
+      emit(new AS::OperInstr("imulq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(right, new TEMP::TempList(reg, NULL)), NULL));
       return reg;
     }
     case T::DIV_OP:
@@ -163,12 +162,12 @@ TEMP::Temp *munchExp(T::Exp *exp)
       emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RAX(), NULL), new TEMP::TempList(left, NULL)));
       emit(new AS::OperInstr("cltd", new TEMP::TempList(F::RAX(), 
         new TEMP::TempList(F::RDX(), NULL)), 
-        new TEMP::TempList(F::RAX(), NULL), new AS::Targets(NULL)));
+        new TEMP::TempList(F::RAX(), NULL), NULL));
       emit(new AS::OperInstr("idivq `s0", new TEMP::TempList(F::RAX(), 
         new TEMP::TempList(F::RDX(), NULL)), 
         new TEMP::TempList(right, 
         new TEMP::TempList(F::RAX(), 
-        new TEMP::TempList(F::RDX(), NULL))), new AS::Targets(NULL)));
+        new TEMP::TempList(F::RDX(), NULL))), NULL));
       emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(F::RAX(), NULL)));
       return reg;
     }
@@ -180,7 +179,7 @@ TEMP::Temp *munchExp(T::Exp *exp)
     T::MemExp *e = (T::MemExp *)exp;
 
     TEMP::Temp *r = munchExp(e->exp);
-    emit(new AS::OperInstr("movq (`s0),`d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(r, NULL), new AS::Targets(NULL)));
+    emit(new AS::OperInstr("movq (`s0), `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(r, NULL), NULL));
     return reg;
   }
   case T::Exp::TEMP:
@@ -190,14 +189,14 @@ TEMP::Temp *munchExp(T::Exp *exp)
     munchStm(((T::EseqExp *)exp)->stm);
     return munchExp(((T::EseqExp *)exp)->exp);
   case T::Exp::NAME:
-    sprintf(temp, "\tleaq %s(%%rip), `d0 ", ((T::NameExp *)exp)->name->Name().c_str());
+    sprintf(temp, "leaq %s(%%rip), `d0 ", ((T::NameExp *)exp)->name->Name().c_str());
     emit(new AS::MoveInstr(temp, new TEMP::TempList(reg, NULL), NULL));
     return reg;
   case T::Exp::CONST:
   {
     T::ConstExp *e = (T::ConstExp *)exp;
-    sprintf(temp, "movq $%d,`d0", e->consti);
-    emit(new AS::OperInstr(std::string(temp), new TEMP::TempList(reg, NULL), NULL, new AS::Targets(NULL)));
+    sprintf(temp, "movq $%d, `d0", e->consti);
+    emit(new AS::OperInstr(std::string(temp), new TEMP::TempList(reg, NULL), NULL, NULL));
     return reg;
   }
   case T::Exp::CALL:
@@ -205,7 +204,8 @@ TEMP::Temp *munchExp(T::Exp *exp)
     T::CallExp *e = (T::CallExp *)exp;
     munchArgs(e->args);
     sprintf(temp, "call %s", TEMP::LabelString(((T::NameExp *)e->fun)->name).c_str());
-    emit(new AS::OperInstr(std::string(temp), new TEMP::TempList(F::RAX(), 
+    emit(new AS::OperInstr(std::string(temp), 
+      new TEMP::TempList(F::RAX(), 
       new TEMP::TempList(F::RDI(), 
       new TEMP::TempList(F::RSI(), 
       new TEMP::TempList(F::RDX(), 
@@ -213,7 +213,7 @@ TEMP::Temp *munchExp(T::Exp *exp)
       new TEMP::TempList(F::R8(), 
       new TEMP::TempList(F::R9(), 
       new TEMP::TempList(F::R10(), 
-      new TEMP::TempList(F::R11(), NULL))))))))), NULL, new AS::Targets(NULL)));
+      new TEMP::TempList(F::R11(), NULL))))))))), NULL, NULL));
     emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(F::RAX(), NULL)));
     return reg;
   }
@@ -225,9 +225,9 @@ void munchArgs(T::ExpList *list)
   for(int num = 1; list; num++, list = list->tail){
     TEMP::Temp *arg = munchExp(list->head);
     if(F::ARG_nth(num)){
-      emit(new AS::MoveInstr("movq `s0,`d0", new TEMP::TempList(F::ARG_nth(num), NULL), new TEMP::TempList(arg, NULL)));
+      emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::ARG_nth(num), NULL), new TEMP::TempList(arg, NULL)));
     } else
-      emit(new AS::OperInstr("pushq `s0", NULL, new TEMP::TempList(arg, NULL), new AS::Targets(NULL)));
+      emit(new AS::OperInstr("pushq `s0", NULL, new TEMP::TempList(arg, NULL), NULL));
   }
 
   return;

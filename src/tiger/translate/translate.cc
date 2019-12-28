@@ -12,7 +12,7 @@
 #include "tiger/util/util.h"
 
 #define LOG(format, args...) do{            \
-  FILE *debug_log = fopen("tiger.log", "a+"); \
+  FILE *debug_log = fopen("translate.log", "a+"); \
   fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
   fprintf(debug_log, format, ##args);       \
   fclose(debug_log);\

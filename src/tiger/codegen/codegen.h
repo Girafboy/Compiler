@@ -8,7 +8,6 @@
 namespace CG {
 
 static AS::InstrList *instr_list = NULL;
-static AS::InstrList *instr_tail = NULL;
 
 static void saveCalleeRegs();
 static void restoreCalleeRegs();
