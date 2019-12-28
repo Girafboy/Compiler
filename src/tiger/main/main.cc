@@ -24,29 +24,7 @@ namespace {
 
 TEMP::Map* temp_map;
 
-void init_regmap(TEMP::Map *regmap)
-{
-  regmap->Enter(F::RAX(), new std::string("%rax"));
-	regmap->Enter(F::RDI(), new std::string("%rdi"));
-	regmap->Enter(F::RSI(), new std::string("%rsi"));
-	regmap->Enter(F::RDX(), new std::string("%rdx"));
-	regmap->Enter(F::RCX(), new std::string("%rcx"));
-	regmap->Enter(F::R8(), new std::string("%r8"));
-	regmap->Enter(F::R9(), new std::string("%r9"));
-	regmap->Enter(F::R10(), new std::string("%r10"));
-	regmap->Enter(F::R11(), new std::string("%r11"));
-	regmap->Enter(F::RBX(), new std::string("%rbx"));
-	regmap->Enter(F::RBP(), new std::string("%rbp"));
-	regmap->Enter(F::R12(), new std::string("%r12"));
-	regmap->Enter(F::R13(), new std::string("%r13"));
-	regmap->Enter(F::R14(), new std::string("%r14"));
-	regmap->Enter(F::R15(), new std::string("%r15"));
-	regmap->Enter(F::SP(), new std::string("%rsp"));
-}
 void do_proc(FILE* out, F::ProcFrag* procFrag) {
-  static TEMP::Map *regmap = TEMP::Map::Empty();
-  init_regmap(regmap);
-
   temp_map = TEMP::Map::Empty();
   // Init temp_map
   fprintf(debug_log, "doProc for function %s:\n", procFrag->frame->label->Name().c_str());
@@ -68,13 +46,14 @@ void do_proc(FILE* out, F::ProcFrag* procFrag) {
 
   // lab5&lab6: code generation
   AS::InstrList* iList = CG::Codegen(procFrag->frame, stmList); /* 9 */
-  iList->Print(debug_log, TEMP::Map::LayerMap(regmap, TEMP::Map::Name()));
+  iList->Print(debug_log, TEMP::Map::LayerMap(F::RegMap(), TEMP::Map::Name()));
   fprintf(debug_log, "----======before RA=======-----\n");
 
   // lab6: register allocation
   RA::Result allocation = RA::RegAlloc(procFrag->frame, iList); /* 11 */
   // iList->Print(debug_log, allocation.coloring);
-  // fprintf(debug_log, "----======after RA=======-----\n");
+  allocation.coloring->DumpMap(debug_log);
+  fprintf(debug_log, "----======after RA=======-----\n");
 
   AS::Proc* proc = F::F_procEntryExit3(procFrag->frame, allocation.il);
 
@@ -132,7 +111,7 @@ int main(int argc, char** argv) {
 
   // Lab 6: escape analysis
   // If you have implemented escape analysis, uncomment this
-  // ESC::FindEscape(absyn_root); /* set varDec's escape field */
+  ESC::FindEscape(absyn_root); /* set varDec's escape field */
 
   // Lab5: translate IR tree
   frags = TR::TranslateProgram(absyn_root);

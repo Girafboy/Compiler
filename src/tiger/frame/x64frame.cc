@@ -223,4 +223,56 @@ TEMP::Temp *ARG_nth(int num)
   }
 }
 
+TEMP::Map *RegMap()
+{
+  static TEMP::Map *regmap = NULL;
+  if(regmap)
+    return regmap;
+  regmap = TEMP::Map::Empty();
+	regmap->Enter(F::RAX(), new std::string("%rax"));
+	regmap->Enter(F::RDI(), new std::string("%rdi"));
+	regmap->Enter(F::RSI(), new std::string("%rsi"));
+	regmap->Enter(F::RDX(), new std::string("%rdx"));
+	regmap->Enter(F::RCX(), new std::string("%rcx"));
+	regmap->Enter(F::R8(), new std::string("%r8"));
+	regmap->Enter(F::R9(), new std::string("%r9"));
+	regmap->Enter(F::R10(), new std::string("%r10"));
+	regmap->Enter(F::R11(), new std::string("%r11"));
+	regmap->Enter(F::RBX(), new std::string("%rbx"));
+	regmap->Enter(F::RBP(), new std::string("%rbp"));
+	regmap->Enter(F::R12(), new std::string("%r12"));
+	regmap->Enter(F::R13(), new std::string("%r13"));
+	regmap->Enter(F::R14(), new std::string("%r14"));
+	regmap->Enter(F::R15(), new std::string("%r15"));
+	regmap->Enter(F::SP(), new std::string("%rsp"));
+  return regmap;
+}
+
+TEMP::TempList *AllRegs()
+{
+  static TEMP::TempList *templist = 
+    new TEMP::TempList(SP(), AllRegs_noRSP());
+  return templist;
+}
+
+TEMP::TempList *AllRegs_noRSP()
+{
+  static TEMP::TempList *templist = 
+    new TEMP::TempList(RAX(),
+    new TEMP::TempList(RDI(),
+    new TEMP::TempList(RSI(),
+    new TEMP::TempList(RDX(),
+    new TEMP::TempList(RCX(),
+    new TEMP::TempList(R8(),
+    new TEMP::TempList(R9(),
+    new TEMP::TempList(R10(),
+    new TEMP::TempList(R11(),
+    new TEMP::TempList(RBX(),
+    new TEMP::TempList(RBP(),
+    new TEMP::TempList(R12(),
+    new TEMP::TempList(R13(),
+    new TEMP::TempList(R14(),
+    new TEMP::TempList(R15(), NULL)))))))))))))));
+  return templist;
+}
 }  // namespace F

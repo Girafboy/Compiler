@@ -16,6 +16,8 @@ class MoveList {
 
   MoveList(G::Node<TEMP::Temp>* src, G::Node<TEMP::Temp>* dst, MoveList* tail)
       : src(src), dst(dst), tail(tail) {}
+
+  bool contain(G::Node<TEMP::Temp>* src, G::Node<TEMP::Temp>* dst);
 };
 
 class LiveGraph {
@@ -26,6 +28,10 @@ class LiveGraph {
 
 LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph);
 
+TEMP::TempList *Union(TEMP::TempList *left, TEMP::TempList *right);
+TEMP::TempList *Difference(TEMP::TempList *left, TEMP::TempList *right);
+bool Equal(TEMP::TempList *left, TEMP::TempList *right);
+bool Contain(TEMP::TempList *container, TEMP::Temp *temp);
 }  // namespace LIVE
 
 #endif

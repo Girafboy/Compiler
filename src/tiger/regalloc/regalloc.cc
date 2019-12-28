@@ -3,27 +3,11 @@
 namespace RA
 {
 static StackVarList *varlist = new StackVarList(NULL, 0);
-static TEMP::Map *regmap = TEMP::Map::Empty();
+TEMP::Map *regmap = F::RegMap();
 
 Result RegAlloc(F::Frame *f, AS::InstrList *il)
 {
 	// TODO: Put your codes here (lab6).
-	regmap->Enter(F::RAX(), new std::string("%rax"));
-	regmap->Enter(F::RDI(), new std::string("%rdi"));
-	regmap->Enter(F::RSI(), new std::string("%rsi"));
-	regmap->Enter(F::RDX(), new std::string("%rdx"));
-	regmap->Enter(F::RCX(), new std::string("%rcx"));
-	regmap->Enter(F::R8(), new std::string("%r8"));
-	regmap->Enter(F::R9(), new std::string("%r9"));
-	regmap->Enter(F::R10(), new std::string("%r10"));
-	regmap->Enter(F::R11(), new std::string("%r11"));
-	regmap->Enter(F::RBX(), new std::string("%rbx"));
-	regmap->Enter(F::RBP(), new std::string("%rbp"));
-	regmap->Enter(F::R12(), new std::string("%r12"));
-	regmap->Enter(F::R13(), new std::string("%r13"));
-	regmap->Enter(F::R14(), new std::string("%r14"));
-	regmap->Enter(F::R15(), new std::string("%r15"));
-	regmap->Enter(F::SP(), new std::string("%rsp"));
 	TEMP::Map *destmap = TEMP::Map::Empty();
 	AS::InstrList *cur = il->tail;
 	while (cur){

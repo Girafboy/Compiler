@@ -156,12 +156,15 @@ TEMP::Temp *R13();
 TEMP::Temp *R14();
 TEMP::Temp *R15();
 
-TEMP::Temp *FP();
 TEMP::Temp *SP();
 
+TEMP::Temp *FP();
 TEMP::Temp *RV();
 
 TEMP::Temp *ARG_nth(int num);
+TEMP::Map *RegMap();
+TEMP::TempList *AllRegs();
+TEMP::TempList *AllRegs_noRSP();
 }  // namespace F
 
 #endif
