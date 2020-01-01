@@ -54,7 +54,8 @@ static void restoreCalleeRegs()
   emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R15(), NULL), new TEMP::TempList(saved_r15, NULL)));
 }
 
-void emit(AS::Instr * instr){
+void emit(AS::Instr * instr)
+{
   if(instr_list)
     instr_list = AS::InstrList::Splice(instr_list, new AS::InstrList(instr,NULL));
   else

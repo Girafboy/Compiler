@@ -25,19 +25,17 @@ AS::InstrList *fprefetch(TEMP::TempList *templist, F::Frame *frame, TEMP::Map *d
 	AS::InstrList *prefetch = NULL;
 
 	for(; templist && templist->head; templist = templist->tail){
-		TEMP::Temp *temp = templist->head;
-		if (F::RegMap()->Look(temp))
+		if (F::RegMap()->Look(templist->head))
 			continue;
 			
-		int *offset = tempmap->Look(temp);
+		int *offset = tempmap->Look(templist->head);
 		if (!offset){
 			frame->s_offset -= F::wordsize;
 			offset = new int(frame->s_offset);
-			tempmap->Enter(temp, offset);
-		}
-		else
+		}else
 			templist->head = TEMP::Temp::NewTemp();
-		
+		tempmap->Enter(templist->head, offset);
+
 		sprintf(str, "movq (%s_framesize-%d)(`s0), `d0", frame->label->Name().c_str(), -*offset);
 		TEMP::Temp *r = NULL;
 		if(count == 0){
@@ -61,18 +59,16 @@ AS::InstrList *frestore(TEMP::TempList *templist, F::Frame *frame, TEMP::Map *de
 	AS::InstrList *restore = NULL;
 
 	for(; templist && templist->head; templist = templist->tail){
-		TEMP::Temp *temp = templist->head;
-		if (F::RegMap()->Look(temp))
+		if (F::RegMap()->Look(templist->head))
 			continue;
 
-		int *offset = tempmap->Look(temp);
+		int *offset = tempmap->Look(templist->head);
 		if (!offset){
 			frame->s_offset -= F::wordsize;
 			offset = new int(frame->s_offset);
-			tempmap->Enter(temp, offset);
-		}
-		else
+		}else
 			templist->head = TEMP::Temp::NewTemp();
+		tempmap->Enter(templist->head, offset);
 
 		sprintf(str, "movq `s0, (%s_framesize-%d)(`d0)", frame->label->Name().c_str(), -*offset);
 		TEMP::Temp *r = NULL;
