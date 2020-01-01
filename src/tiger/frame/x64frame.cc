@@ -8,39 +8,17 @@ const int wordsize = 8;
 
 X64Frame::X64Frame(TEMP::Label *name, U::BoolList *escapes) : Frame(name, escapes)
 {
-  // this->formals = new AccessList(NULL, NULL);
-  // AccessList *ftail = formals;
-  // this->view_shift = new T::StmList(NULL, NULL);
-  // T::StmList *vtail = view_shift;
-
   this->s_offset = -8;
-  // int formal_offset = wordsize;
-  // int num = 1;
-  // for(; escapes; escapes = escapes->tail, num++){
-  //   if(escapes->head){
-  //     if(ARG_nth(num)){
-  //       ftail->tail = new AccessList(new InFrameAccess(s_offset), NULL);
-  //       vtail->tail = new T::StmList(new T::MoveStm(T::NewMemPlus_Const(new T::TempExp(FP()), s_offset), new T::TempExp(ARG_nth(num))), NULL);
-  //       s_offset -= wordsize;
-  //       ftail = ftail->tail;
-  //       vtail = vtail->tail;
-  //     } else {
-  //       ftail->tail = new AccessList(new InFrameAccess(formal_offset), NULL);
-  //       formal_offset += wordsize;
-  //       ftail = ftail->tail;
-  //     }
-  //   } else {
-  //     TEMP::Temp *temp = TEMP::Temp::NewTemp();
-  //     if(ARG_nth(num))
-  //       view_shift = new T::StmList(new T::MoveStm(new T::TempExp(temp), new T::TempExp(ARG_nth(num))), view_shift);
-  //     else
-  //       printf("Frame: the 7-nth formal should be passed on frame.");
-  //     formals = new AccessList(new InRegAccess(temp), formals);
-  //   }
-  // }
+  this->formals = new AccessList(NULL, NULL);
+  AccessList *ftail = this->formals;
+
+  int num = 1;
+  for(; escapes; escapes = escapes->tail, num++){
+    ftail->tail = new AccessList(allocLocal(escapes->head), NULL);
+    ftail = ftail->tail;
+  }
   
-  // formals = formals->tail;
-  // view_shift = view_shift->tail;
+  this->formals = this->formals->tail;
 }
 
 Access *X64Frame::allocLocal(bool escape)
@@ -61,19 +39,14 @@ T::Exp *externalCall(std::string s, T::ExpList *args)
 }
 
 T::Stm *F_procEntryExit1(Frame *frame, T::Stm *stm){
-	T::StmList *slist = frame->view_shift;
-	T::Stm *bind = NULL;
-	for(; slist; slist = slist->tail){
-		if(bind)
-			bind = new T::SeqStm(bind,slist->head);
-		else
-			bind = slist->head;
-	}
-	if(bind)
-		bind = new T::SeqStm(bind,stm);
-	else
-		bind = stm;
-	return bind;
+
+  int num = 1;
+  T::Stm *viewshift = new T::ExpStm(new T::ConstExp(0));
+  for(AccessList *formals = frame->formals; formals; formals = formals->tail, num++)
+    if (F::ARG_nth(num))
+      viewshift = new T::SeqStm(viewshift, new T::MoveStm(formals->head->ToExp(new T::TempExp(F::FP())), new T::TempExp(F::ARG_nth(num))));
+
+	return new T::SeqStm(viewshift, stm);
 }
 
 AS::InstrList *F_procEntryExit2(AS::InstrList *body)
@@ -86,18 +59,19 @@ AS::InstrList *F_procEntryExit2(AS::InstrList *body)
 
 AS::Proc * F_procEntryExit3(F::Frame * frame, AS::InstrList * body){
   // fix size! TODO:change fixsize 0x10000
-  std::string prolog = frame->label->Name();
-  prolog.append(std::string(":\n.set "));
-  prolog.append(frame->label->Name());
-  prolog.append(std::string("_framesize,$0x10000\n"   \
-                            "\tpushq %rcx\n"          \
-                            "\tpushq %rbp\n"          \
-                            "\tmovq %rsp, %rbp\n"     \
-                            "\tsubq $0x10000, %rsp\n"));
-  std::string epilog =  "\taddq $0x10000,%rsp\n"  \
-                        "\tpopq %rbp\n"           \
-                        "\tpopq %rcx\n"           \
-                        "\tret\n";
+  static char instr[256];
+
+  std::string prolog;
+  sprintf(instr, ".set %s_framesize, %d\n", frame->label->Name().c_str(), -frame->s_offset);
+  prolog = std::string(instr);
+  sprintf(instr, "%s:\n", frame->label->Name().c_str());
+  prolog.append(std::string(instr));
+  sprintf(instr, "\tsubq $%s_framesize, %%rsp\n", frame->label->Name().c_str());
+  prolog.append(std::string(instr));
+
+  sprintf(instr, "\taddq $%s_framesize, %%rsp\n", frame->label->Name().c_str());
+  std::string epilog = std::string(instr);
+  epilog.append(std::string("\tret\n"));
   return new AS::Proc(prolog, body, epilog);
 }
 
@@ -275,4 +249,32 @@ TEMP::TempList *AllRegs_noRSP()
     new TEMP::TempList(R15(), NULL)))))))))))))));
   return templist;
 }
+
+TEMP::TempList *CallerSavedRegs()
+{
+  static TEMP::TempList *templist = 
+    new TEMP::TempList(RAX(),
+    new TEMP::TempList(RDI(),
+    new TEMP::TempList(RSI(),
+    new TEMP::TempList(RDX(),
+    new TEMP::TempList(RCX(),
+    new TEMP::TempList(R8(),
+    new TEMP::TempList(R9(),
+    new TEMP::TempList(R10(),
+    new TEMP::TempList(R11(), NULL)))))))));
+  return templist;
+}
+
+TEMP::TempList *CalleeSavedRegs()
+{
+  static TEMP::TempList *templist = 
+    new TEMP::TempList(RBX(),
+    new TEMP::TempList(RBP(),
+    new TEMP::TempList(R12(),
+    new TEMP::TempList(R13(),
+    new TEMP::TempList(R14(),
+    new TEMP::TempList(R15(), NULL))))));
+  return templist;
+}
+
 }  // namespace F

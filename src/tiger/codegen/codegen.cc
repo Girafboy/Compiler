@@ -122,7 +122,7 @@ void munchStm(T::Stm *stm)
 
 TEMP::Temp *munchExp(T::Exp *exp)
 {
-  static char temp[256];
+  static char assem[256];
   TEMP::Temp *reg = TEMP::Temp::NewTemp();
   switch (exp->kind)
   {
@@ -183,37 +183,32 @@ TEMP::Temp *munchExp(T::Exp *exp)
     return reg;
   }
   case T::Exp::TEMP:
-    return ((T::TempExp *)exp)->temp;
+    if(((T::TempExp *)exp)->temp != F::FP())
+      return ((T::TempExp *)exp)->temp;
+    sprintf(assem, "leaq %s(`s0), `d0 ", framesize);
+    emit(new AS::OperInstr(assem, new TEMP::TempList(reg, NULL), new TEMP::TempList(F::SP(), NULL), NULL));
+    return reg;
   case T::Exp::ESEQ:
     assert(((T::EseqExp *)exp)->stm && ((T::EseqExp *)exp)->exp);
     munchStm(((T::EseqExp *)exp)->stm);
     return munchExp(((T::EseqExp *)exp)->exp);
   case T::Exp::NAME:
-    sprintf(temp, "leaq %s(%%rip), `d0 ", ((T::NameExp *)exp)->name->Name().c_str());
-    emit(new AS::MoveInstr(temp, new TEMP::TempList(reg, NULL), NULL));
+    sprintf(assem, "leaq %s(%%rip), `d0 ", ((T::NameExp *)exp)->name->Name().c_str());
+    emit(new AS::MoveInstr(assem, new TEMP::TempList(reg, NULL), NULL));
     return reg;
   case T::Exp::CONST:
   {
     T::ConstExp *e = (T::ConstExp *)exp;
-    sprintf(temp, "movq $%d, `d0", e->consti);
-    emit(new AS::OperInstr(std::string(temp), new TEMP::TempList(reg, NULL), NULL, NULL));
+    sprintf(assem, "movq $%d, `d0", e->consti);
+    emit(new AS::OperInstr(std::string(assem), new TEMP::TempList(reg, NULL), NULL, NULL));
     return reg;
   }
   case T::Exp::CALL:
   {
     T::CallExp *e = (T::CallExp *)exp;
     munchArgs(e->args);
-    sprintf(temp, "call %s", TEMP::LabelString(((T::NameExp *)e->fun)->name).c_str());
-    emit(new AS::OperInstr(std::string(temp), 
-      new TEMP::TempList(F::RAX(), 
-      new TEMP::TempList(F::RDI(), 
-      new TEMP::TempList(F::RSI(), 
-      new TEMP::TempList(F::RDX(), 
-      new TEMP::TempList(F::RCX(), 
-      new TEMP::TempList(F::R8(), 
-      new TEMP::TempList(F::R9(), 
-      new TEMP::TempList(F::R10(), 
-      new TEMP::TempList(F::R11(), NULL))))))))), NULL, NULL));
+    sprintf(assem, "call %s", TEMP::LabelString(((T::NameExp *)e->fun)->name).c_str());
+    emit(new AS::OperInstr(std::string(assem), F::CallerSavedRegs(), NULL, NULL));
     emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(F::RAX(), NULL)));
     return reg;
   }

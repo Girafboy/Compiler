@@ -237,7 +237,7 @@ T::Exp *StaticLink(TR::Level *target, TR::Level *level)
 {
   T::Exp *staticlink = new T::TempExp(F::FP());
   while(level != target){
-    staticlink = T::NewMemPlus_Const(staticlink, F::wordsize);
+    staticlink = level->frame->formals->head->ToExp(staticlink);
     level = level->parent;
   }
   return staticlink;
@@ -433,11 +433,8 @@ TR::ExpAndTy CallExp::Translate(S::Table<E::EnvEntry> *venv,
 
   if(!fun_entry->level->parent)
     exp = new TR::ExExp(F::externalCall(func->Name(), list));
-  else{
-    T::Exp *staticlink = StaticLink(fun_entry->level->parent, level);
-		// exp = new TR::ExExp(new T::CallExp(new T::NameExp(func), new T::ExpList(staticlink, list)));
-    exp = new TR::ExExp(new T::EseqExp(new T::MoveStm(new T::TempExp(F::RCX()), staticlink), new T::CallExp(new T::NameExp(func), list)));
-  }
+  else
+		exp = new TR::ExExp(new T::CallExp(new T::NameExp(func), new T::ExpList(StaticLink(fun_entry->level->parent, level), list)));
 
   return TR::ExpAndTy(exp, ty);
 }
@@ -783,7 +780,7 @@ TR::ExpAndTy ForExp::Translate(S::Table<E::EnvEntry> *venv,
 	}
 
 	venv->BeginScope();
-  venv->Enter(var, new E::VarEntry(TR::Access::AllocLocal(level, escape), check_lo.ty, escape));
+  venv->Enter(var, new E::VarEntry(TR::Access::AllocLocal(level, escape), check_lo.ty));
 	TR::ExpAndTy check_body = body->Translate(venv, tenv, level, label);
   if(check_body.ty->kind != TY::Ty::Kind::VOID){
     errormsg.Error(pos, "for body must produce no value");
@@ -951,8 +948,8 @@ TR::Exp *FunctionDec::Translate(S::Table<E::EnvEntry> *venv,
                                 TEMP::Label *label) const {
   LOG("Translate FunctionDec level %s label %s\n", TEMP::LabelString(level->frame->label).c_str(), TEMP::LabelString(label).c_str());
   // TODO: Put your codes here (lab5).
-  S::Table<int> *check_table = new S::Table<int>();
 
+  S::Table<int> *check_table = new S::Table<int>();
   for (A::FunDecList *fundec_list = functions; fundec_list; fundec_list = fundec_list->tail) {
     A::FunDec *fundec = fundec_list->head;
 
@@ -963,89 +960,40 @@ TR::Exp *FunctionDec::Translate(S::Table<E::EnvEntry> *venv,
     check_table->Enter(fundec->name, (int *)1);
 
     TY::TyList *formaltys = make_formal_tylist(tenv, fundec->params);
+    TR::Level *new_level = TR::Level::NewLevel(level, fundec->name, make_formal_esclist(fundec->params));
 
-    U::BoolList *args = make_formal_esclist(fundec->params);
-    TR::Level *new_level = TR::Level::NewLevel(level, fundec->name, args);
-
-    TY::Ty *result;
-    if (fundec->result) {
-      result = tenv->Look(fundec->result);
-      if (!result){
-        errormsg.Error(pos, "FunctionDec undefined result.");
-        continue;
-      }
+    if(!fundec->result){
+      venv->Enter(fundec->name, new E::FunEntry(new_level, fundec->name, formaltys, TY::VoidTy::Instance()));
+      continue;
     }
-    else
-      result = TY::VoidTy::Instance();
+    TY::Ty *result = tenv->Look(fundec->result);
+    if (!result){
+      errormsg.Error(pos, "FunctionDec undefined result.");
+      continue;
+    }
     venv->Enter(fundec->name, new E::FunEntry(new_level, fundec->name, formaltys, result));
   }
 
-  for (A::FunDecList *fundec_list = functions; fundec_list;) {
+  for (A::FunDecList *fundec_list = functions; fundec_list; fundec_list = fundec_list->tail) {
     A::FunDec *fundec = fundec_list->head;
+
     venv->BeginScope();
-
-    TY::TyList *tylist = make_formal_tylist(tenv, fundec->params);
-    FieldList *records = fundec->params;
-
     E::FunEntry *funentry = (E::FunEntry *)venv->Look(fundec->name);
-
-    int num = 1;
-
-    T::SeqStm *parainit = new T::SeqStm((T::Stm *)0xf, NULL);
-
-    while (records)
-    {
-      TR::Access *tmp = TR::Access::AllocLocal(funentry->level, true);
-      venv->Enter(records->head->name, new E::VarEntry(tmp, tylist->head));
-      switch (num)
-      {
-      case 1:
-        parainit->left = new T::MoveStm(tmp->access->ToExp(new T::TempExp(F::FP())), new T::TempExp(F::ARG_nth(num)));
-        break;
-      case 2:
-        parainit->right = new T::MoveStm(tmp->access->ToExp(new T::TempExp(F::FP())), new T::TempExp(F::ARG_nth(num)));
-        break;
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-        parainit = new T::SeqStm(parainit, new T::MoveStm(tmp->access->ToExp(new T::TempExp(F::FP())), new T::TempExp(F::ARG_nth(num))));
-        break;
-      default:
-        assert(0);
-      }
-
-      num++;
-      records = records->tail;
-      tylist = tylist->tail;
-    }
-
+    
+    TY::TyList *formaltys = funentry->formals;
+    F::AccessList *formalaccs = funentry->level->frame->formals->tail;//staticlink
+    for(FieldList *fields = fundec->params; fields; fields = fields->tail, formaltys = formaltys->tail, formalaccs = formalaccs->tail)
+      venv->Enter(fields->head->name, new E::VarEntry(new TR::Access(funentry->level, formalaccs->head), formaltys->head));
+    
     TR::ExpAndTy entry = fundec->body->Translate(venv, tenv, funentry->level, funentry->label);
 
-    if (entry.ty->kind != TY::Ty::VOID && fundec->result == NULL)
-    {
+    if (!entry.ty->IsSameType(TY::VoidTy::Instance()) && fundec->result == NULL)
       errormsg.Error(pos, "procedure returns value");
-    }
-    if (fundec->result && entry.ty->kind != tenv->Look(fundec->result)->ActualTy()->kind)
-    {
-      printf("kind1: %d kind2: %d\n", entry.ty->kind, tenv->Look(fundec->result)->kind);
+    if (fundec->result && !entry.ty->IsSameType(tenv->Look(fundec->result)->ActualTy()))
       errormsg.Error(pos, "function return value type incorrect");
-    }
     venv->EndScope();
 
-    fundec_list = fundec_list->tail;
-
-    T::Exp *res = entry.exp->UnEx();
-    T::Stm *moveResToRV = new T::MoveStm(new T::TempExp(F::RV()), res);
-
-    if (num == 2){
-      parainit->right = moveResToRV;
-      moveResToRV = parainit;
-    }
-    else if (num > 2)
-      moveResToRV = new T::SeqStm(parainit, moveResToRV);
-
-    TR::fragtail->tail = new F::FragList(new F::ProcFrag(moveResToRV, funentry->level->frame), NULL);
+    TR::fragtail->tail = new F::FragList(new F::ProcFrag(F::F_procEntryExit1(funentry->level->frame, new T::MoveStm(new T::TempExp(F::RV()), entry.exp->UnEx())), funentry->level->frame), NULL);
     TR::fragtail = TR::fragtail->tail;
   }
 

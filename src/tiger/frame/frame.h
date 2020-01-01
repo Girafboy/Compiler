@@ -24,8 +24,6 @@ class Frame {
  public:
   TEMP::Label *label;
   AccessList *formals;
-  AccessList *locals;
-  T::StmList *view_shift;
   int s_offset;
 
   Frame(TEMP::Label *name, U::BoolList *escapes) : label(name) {}
@@ -165,6 +163,9 @@ TEMP::Temp *ARG_nth(int num);
 TEMP::Map *RegMap();
 TEMP::TempList *AllRegs();
 TEMP::TempList *AllRegs_noRSP();
+TEMP::TempList *CallerSavedRegs();
+TEMP::TempList *CalleeSavedRegs();
+
 }  // namespace F
 
 #endif
