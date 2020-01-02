@@ -1,5 +1,12 @@
 #include "tiger/liveness/flowgraph.h"
 
+#define LOG(format, args...) do{            \
+  FILE *debug_log = fopen("register.log", "a+"); \
+  fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
+  fprintf(debug_log, format, ##args);       \
+  fclose(debug_log);\
+} while(0)
+
 namespace FG {
 
 TEMP::TempList* Def(G::Node<AS::Instr>* n) {
@@ -40,13 +47,16 @@ bool IsJmp(G::Node<AS::Instr>* n) {
 
 G::Graph<AS::Instr>* AssemFlowGraph(AS::InstrList* il, F::Frame* f) {
   // TODO: Put your codes here (lab6).
+  LOG("AssemFlowGraph\n");
   G::Graph<AS::Instr> *flowgraph = new G::Graph<AS::Instr>();
   TAB::Table<TEMP::Label, G::Node<AS::Instr>> *labelnode = new TAB::Table<TEMP::Label, G::Node<AS::Instr>>();
 
   for(AS::InstrList *instrlist = il; instrlist; instrlist = instrlist->tail){
     AS::Instr *instr = instrlist->head;
 
-    G::Node<AS::Instr> *prev = flowgraph->mylast->head;
+    G::Node<AS::Instr> *prev = NULL;
+    if(flowgraph->mylast)
+      prev = flowgraph->mylast->head;
     G::Node<AS::Instr> *node = flowgraph->NewNode(instr);
     
     if(prev && !IsJmp(prev))
@@ -58,7 +68,7 @@ G::Graph<AS::Instr>* AssemFlowGraph(AS::InstrList* il, F::Frame* f) {
 
   for(G::NodeList<AS::Instr> *nodelist = flowgraph->Nodes(); nodelist; nodelist = nodelist->tail){
     G::Node<AS::Instr> *node = nodelist->head;
-    if(!IsJmp(node))
+    if(node->NodeInfo()->kind != AS::Instr::Kind::OPER || !((AS::OperInstr *)node->NodeInfo())->jumps)
       continue;
     
     for(TEMP::LabelList *labels = ((AS::OperInstr *)node->NodeInfo())->jumps->labels; labels; labels = labels->tail)

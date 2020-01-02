@@ -31,7 +31,7 @@ class Graph {
 
   /* Show all the nodes and edges in the graph, using the function "showInfo"
     to print the name of each node */
-  static void Show(FILE* out, NodeList<T>* p, void showInfo(T*));
+  static void Show(FILE* out, NodeList<T>* p, void showInfo(FILE*, T*));
 
   int nodecount;
   NodeList<T>* mynodes;
@@ -96,10 +96,15 @@ class NodeList {
 
   /* Tell if "a" is in the list */
   bool InNodeList(Node<T>* a);
+  NodeList<T>* Reverse();
 
   /* put list b at the back of list a and return the concatenated list */
   static NodeList<T>* CatList(NodeList<T>* a, NodeList<T>* b);
   static NodeList<T>* DeleteNode(Node<T>* a, NodeList<T>* l);
+
+  static NodeList<T>* Intersect(NodeList<T>* left, NodeList<T>* right);
+  static NodeList<T>* Union(NodeList<T>* left, NodeList<T>* right);
+  static NodeList<T>* Difference(NodeList<T>* left, NodeList<T>* right);
 };
 
 /* generic creation of Node<T> */
@@ -131,7 +136,7 @@ void Graph<T>::AddEdge(Node<T>* from, Node<T>* to) {
   assert(from);
   assert(to);
   assert(from->mygraph_ == to->mygraph_);
-  if (from->GoesTo(to)) return;
+  if (from->GoesTo(to) || from == to) return;
   to->preds_ = new NodeList<T>(from, to->preds_);
   from->succs_ = new NodeList<T>(to, from->succs_);
 }
@@ -205,6 +210,15 @@ bool NodeList<T>::InNodeList(Node<T>* a) {
 }
 
 template <class T>
+NodeList<T>* NodeList<T>::Reverse()
+{
+  NodeList<T> *l = NULL;
+  for(NodeList<T> *nodes = this; nodes; nodes = nodes->tail)
+    l = new NodeList<T>(nodes->head, l);
+  return l;
+}
+
+template <class T>
 NodeList<T>* NodeList<T>::DeleteNode(Node<T>* a, NodeList<T>* l) {
   assert(a && l);
   if (a == l->head)
@@ -221,6 +235,39 @@ NodeList<T>* NodeList<T>::CatList(NodeList<T>* a, NodeList<T>* b) {
     return new NodeList<T>(a->head, CatList(a->tail, b));
 }
 
+template <class T>
+NodeList<T> *NodeList<T>::Intersect(NodeList<T> *left, NodeList<T> *right)
+{
+  NodeList<T> *list = NULL;
+  for(; left; left = left->tail)
+    if(right->InNodeList(left->head))
+      list = new NodeList<T>(left->head, list);
+  return list;
+}
+
+template <class T>
+NodeList<T> *NodeList<T>::Union(NodeList<T> *left, NodeList<T> *right)
+{
+  NodeList<T> *list = NULL;
+  for(; left; left = left->tail)
+    list = new NodeList<T>(left->head, list);
+  for(; right; right = right->tail)
+    if(!list->InNodeList(right->head))
+      list = new NodeList<T>(right->head, list);
+  return list;
+}
+
+template <class T>
+NodeList<T> *NodeList<T>::Difference(NodeList<T> *left, NodeList<T> *right)
+{
+  NodeList<T> *list = NULL;
+  for(; left; left = left->tail)
+    if(!right->InNodeList(left->head))
+      list = new NodeList<T>(left->head, list);
+  return list;
+}
+
+
 /* The type of "tables" mapping graph-nodes to information */
 template <typename T, typename ValueType>
 using Table = TAB::Table<Node<T>, ValueType>;
@@ -229,12 +276,12 @@ using Table = TAB::Table<Node<T>, ValueType>;
  * Print a human-readable dump for debugging.
  */
 template <class T>
-void Graph<T>::Show(FILE* out, NodeList<T>* p, void showInfo(T*)) {
+void Graph<T>::Show(FILE* out, NodeList<T>* p, void showInfo(FILE*, T*)) {
   for (; p != nullptr; p = p->tail) {
     Node<T>* n = p->head;
     NodeList<T>* q;
     assert(n);
-    if (showInfo) showInfo(n->NodeInfo());
+    if (showInfo) showInfo(out, n->NodeInfo());
     fprintf(out, " (%d): ", n->Key());
     for (q = n->Succ(); q != nullptr; q = q->tail)
       fprintf(out, "%d ", q->head->Key());

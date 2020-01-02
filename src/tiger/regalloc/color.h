@@ -4,6 +4,7 @@
 #include "tiger/frame/temp.h"
 #include "tiger/liveness/liveness.h"
 #include "tiger/util/graph.h"
+#include "tiger/regalloc/regalloc.h"
 
 namespace COL {
 
@@ -11,6 +12,8 @@ using Node = G::Node<TEMP::Temp>;
 using NodeList = G::NodeList<TEMP::Temp>;
 template<typename T>
 using Table = G::Table<TEMP::Temp, T>;
+
+#define K 15
 
 class Result {
  public:
@@ -21,28 +24,17 @@ class Result {
 Result Color(G::Graph<TEMP::Temp>* ig, TEMP::Map* initial, TEMP::TempList* regs,
              LIVE::MoveList* moves);
 
+RA::Result RegAlloc(F::Frame* f, AS::InstrList* il);
+void Build();
+void MakeWorklist();
+void Simplify();
+void Coalesce();
+void Freeze();
+void SelectSpill();
+void AssignColors();
+AS::InstrList * RewriteProgram(F::Frame *f, AS::InstrList *il);
 
-NodeList *simplifyWorklist;
-NodeList *freezeWorklist;
-NodeList *spillWorklist;
-
-NodeList *spilledNodes;
-NodeList *coalescedNodes;
-NodeList *coloredNodes;
-
-NodeList *selectStack;
-
-LIVE::MoveList *coalescedMoves;
-LIVE::MoveList *constrainedMoves;
-LIVE::MoveList *frozenMoves;
-LIVE::MoveList *worklistMoves;
-LIVE::MoveList *activeMoves;
-
-Table<int> degreeTab;
-Table<LIVE::MoveList> *moveListTab;
-Table<Node> *aliasTab;
-Table<std::string> *colorTab;
-
+TEMP::Map * AssignRegisters(LIVE::LiveGraph g);
 }  // namespace COL
 
 #endif

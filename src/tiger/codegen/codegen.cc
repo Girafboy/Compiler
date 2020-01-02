@@ -206,11 +206,39 @@ TEMP::Temp *munchExp(T::Exp *exp)
   }
   case T::Exp::CALL:
   {
+    // TEMP::Temp *saved_rax = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_rdi = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_rsi = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_rdx = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_rcx = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_r8 = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_r9 = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_r10 = TEMP::Temp::NewTemp();
+    // TEMP::Temp *saved_r11 = TEMP::Temp::NewTemp();
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rax, NULL), new TEMP::TempList(F::RAX(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rdi, NULL), new TEMP::TempList(F::RDI(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rsi, NULL), new TEMP::TempList(F::RSI(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rdx, NULL), new TEMP::TempList(F::RDX(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_rcx, NULL), new TEMP::TempList(F::RCX(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r8, NULL), new TEMP::TempList(F::R8(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r9, NULL), new TEMP::TempList(F::R9(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r10, NULL), new TEMP::TempList(F::R10(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(saved_r11, NULL), new TEMP::TempList(F::R11(), NULL)));
+
     T::CallExp *e = (T::CallExp *)exp;
     munchArgs(e->args);
     sprintf(assem, "call %s", TEMP::LabelString(((T::NameExp *)e->fun)->name).c_str());
     emit(new AS::OperInstr(std::string(assem), F::CallerSavedRegs(), NULL, NULL));
     emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(F::RAX(), NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RAX(), NULL), new TEMP::TempList(saved_rax, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RDI(), NULL), new TEMP::TempList(saved_rdi, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RSI(), NULL), new TEMP::TempList(saved_rsi, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RDX(), NULL), new TEMP::TempList(saved_rdx, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RCX(), NULL), new TEMP::TempList(saved_rcx, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R8(), NULL), new TEMP::TempList(saved_r8, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R9(), NULL), new TEMP::TempList(saved_r9, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R10(), NULL), new TEMP::TempList(saved_r10, NULL)));
+    // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::R11(), NULL), new TEMP::TempList(saved_r11, NULL)));
     return reg;
   }
   }

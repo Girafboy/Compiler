@@ -9,6 +9,8 @@
 
 namespace LIVE {
 
+void InstrGraphShow(AS::Instr *instr);
+
 class MoveList {
  public:
   G::Node<TEMP::Temp>*src, *dst;
@@ -18,6 +20,15 @@ class MoveList {
       : src(src), dst(dst), tail(tail) {}
 
   bool contain(G::Node<TEMP::Temp>* src, G::Node<TEMP::Temp>* dst);
+  void Print(FILE *out){
+    fprintf(out, "Move:  t%d ---> t%d\n", src->NodeInfo()->Int(), dst->NodeInfo()->Int());
+    if(tail)
+      tail->Print(out);
+  }
+
+  static MoveList *Intersect(MoveList *left, MoveList *right);
+  static MoveList *Union(MoveList *left, MoveList *right);
+  static MoveList *Difference(MoveList *left, MoveList *right);
 };
 
 class LiveGraph {

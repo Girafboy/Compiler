@@ -12,6 +12,9 @@
 #include "tiger/parse/parser.h"
 #include "tiger/regalloc/regalloc.h"
 #include "tiger/translate/tree.h"
+#include "tiger/regalloc/color.h"
+
+#define DEBUG
 
 FILE *debug_log;
 
@@ -28,8 +31,8 @@ void do_proc(FILE* out, F::ProcFrag* procFrag) {
   temp_map = TEMP::Map::Empty();
   // Init temp_map
   fprintf(debug_log, "doProc for function %s:\n", procFrag->frame->label->Name().c_str());
-  // (new T::StmList(procFrag->body, NULL))->Print(debug_log);
-  // fprintf(debug_log, "-------====IR tree=====-----\n");
+  (new T::StmList(procFrag->body, NULL))->Print(debug_log);
+  fprintf(debug_log, "-------====IR tree=====-----\n");
 
   T::StmList* stmList = C::Linearize(procFrag->body);
   // stmList->Print(debug_log);
@@ -50,7 +53,7 @@ void do_proc(FILE* out, F::ProcFrag* procFrag) {
   fprintf(debug_log, "----======before RA=======-----\n");
 
   // lab6: register allocation
-  RA::Result allocation = RA::RegAlloc(procFrag->frame, iList); /* 11 */
+  RA::Result allocation = COL::RegAlloc(procFrag->frame, iList); /* 11 */
   // iList->Print(debug_log, allocation.coloring);
   allocation.coloring->DumpMap(debug_log);
   fprintf(debug_log, "----======after RA=======-----\n");

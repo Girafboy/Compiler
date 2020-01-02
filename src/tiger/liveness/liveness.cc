@@ -1,12 +1,50 @@
 #include "tiger/liveness/liveness.h"
 
+#define DEBUG
+
+#define LOG(format, args...) do{            \
+  FILE *debug_log = fopen("register.log", "a+"); \
+  fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
+  fprintf(debug_log, format, ##args);       \
+  fclose(debug_log);\
+} while(0)
+
 namespace LIVE {
 
 using NodeTempListTable = TAB::Table<G::Node<AS::Instr>, TEMP::TempList>;
 using TempNodeTable = TAB::Table<TEMP::Temp, G::Node<TEMP::Temp>>;
 
+void InstrGraphShow(FILE *out, AS::Instr *instr)
+{
+  instr->Print(out, TEMP::Map::LayerMap(F::RegMap(), TEMP::Map::Name()));
+  fprintf(out, "\t\t^-------");
+}
+
+void TempGraphShow(FILE *out, TEMP::Temp *t)
+{
+  fprintf(out, "Livegraph:  t%d ->", t->Int());
+}
+
+void NodeTempListTableShow(G::Node<AS::Instr> *key, TEMP::TempList *value)
+{
+  FILE *debug_log = fopen("register.log", "a+");
+  fprintf(debug_log, "Node (%d): ", key->Key());
+  for(; value; value = value->tail)
+    fprintf(debug_log, "t%d ", value->head->Int());
+  fprintf(debug_log, "\n");
+  fclose(debug_log);
+}
+
 LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph) {
   // TODO: Put your codes here (lab6).
+#ifdef DEBUG
+  {
+    LOG("Liveness Begin\n");
+    FILE *debug_log = fopen("register.log", "a+");
+    flowgraph->Show(debug_log, flowgraph->Nodes(), InstrGraphShow);
+    fclose(debug_log);
+  }
+#endif
   NodeTempListTable *in = new NodeTempListTable();
   NodeTempListTable *out = new NodeTempListTable();
   
@@ -23,10 +61,14 @@ LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph) {
    *            out[node] <- out[node] U in[n]
    * until fixedpoint
    */
+  LOG("Liveness: Find Fixed Point\n");
   bool fixedpoint = false;
   while(!fixedpoint){
+    LOG("\tRound\n");
+    // in->Dump(NodeTempListTableShow);
+    // out->Dump(NodeTempListTableShow);
     fixedpoint = true;
-    for(G::NodeList<AS::Instr> *nodelist = flowgraph->Nodes(); nodelist; nodelist = nodelist->tail){
+    for(G::NodeList<AS::Instr> *nodelist = flowgraph->Nodes()->Reverse(); nodelist; nodelist = nodelist->tail){
       G::Node<AS::Instr> *node = nodelist->head;
       
       TEMP::TempList *oldin_templist = in->Look(node);
@@ -46,21 +88,22 @@ LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph) {
    * 2. non-move instr: addEdge(def, out)
    *    move instr    : addEdge(def, out-use)
    */
-  LiveGraph *livegraph = new LiveGraph();
-  livegraph->graph = new G::Graph<TEMP::Temp>();
-  livegraph->moves = NULL;
+  LOG("Liveness: Build Interference Graph\n");
+  LiveGraph livegraph = LiveGraph();
+  livegraph.graph = new G::Graph<TEMP::Temp>();
+  livegraph.moves = NULL;
 
   // step 1
   TempNodeTable *temptab = new TempNodeTable();
   for(TEMP::TempList *list = F::AllRegs_noRSP(); list; list = list->tail){
-    G::Node<TEMP::Temp> *node = livegraph->graph->NewNode(list->head);
+    G::Node<TEMP::Temp> *node = livegraph.graph->NewNode(list->head);
     temptab->Enter(list->head, node);
   }
 
   for(TEMP::TempList *from = F::AllRegs_noRSP(); from; from = from->tail)
     for(TEMP::TempList *to = from->tail; to; to = to->tail){
-      livegraph->graph->AddEdge(temptab->Look(from->head), temptab->Look(to->head));
-      livegraph->graph->AddEdge(temptab->Look(to->head), temptab->Look(from->head));
+      livegraph.graph->AddEdge(temptab->Look(from->head), temptab->Look(to->head));
+      livegraph.graph->AddEdge(temptab->Look(to->head), temptab->Look(from->head));
     }
   
   // step 2
@@ -70,7 +113,7 @@ LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph) {
       if(temp == F::SP())
         continue;
       if(!temptab->Look(temp)){
-        G::Node<TEMP::Temp> *node = livegraph->graph->NewNode(temp);
+        G::Node<TEMP::Temp> *node = livegraph.graph->NewNode(temp);
         temptab->Enter(temp, node);
       }
     }
@@ -84,8 +127,8 @@ LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph) {
           if(def->head == F::SP() || outt->head == F::SP())
             continue;
 
-          livegraph->graph->AddEdge(temptab->Look(def->head), temptab->Look(outt->head));
-          livegraph->graph->AddEdge(temptab->Look(outt->head), temptab->Look(def->head));
+          livegraph.graph->AddEdge(temptab->Look(def->head), temptab->Look(outt->head));
+          livegraph.graph->AddEdge(temptab->Look(outt->head), temptab->Look(def->head));
         }
     }
     // move instr 
@@ -95,30 +138,31 @@ LiveGraph Liveness(G::Graph<AS::Instr>* flowgraph) {
           if(def->head == F::SP() || outt->head == F::SP())
             continue;
           
-          livegraph->graph->AddEdge(temptab->Look(def->head), temptab->Look(outt->head));
-          livegraph->graph->AddEdge(temptab->Look(outt->head), temptab->Look(def->head));
+          livegraph.graph->AddEdge(temptab->Look(def->head), temptab->Look(outt->head));
+          livegraph.graph->AddEdge(temptab->Look(outt->head), temptab->Look(def->head));
         }
       
         for(TEMP::TempList *use = FG::Use(node); use; use = use->tail){
           if(def->head == F::SP() || use->head == F::SP())
             continue;
           
-          if(!livegraph->moves->contain(temptab->Look(def->head), temptab->Look(use->head)))
-            livegraph->moves = new MoveList(temptab->Look(def->head), temptab->Look(use->head), livegraph->moves);
+          if(!livegraph.moves->contain(temptab->Look(def->head), temptab->Look(use->head)))
+            livegraph.moves = new MoveList(temptab->Look(def->head), temptab->Look(use->head), livegraph.moves);
         }
       }
     }
   }
-  return LiveGraph();
-}
 
-bool MoveList::contain(G::Node<TEMP::Temp>* src, G::Node<TEMP::Temp>* dst)
-{
-  for(MoveList *movelist = this; movelist; movelist = movelist->tail)
-    if((movelist->src == src && movelist->dst == dst)
-      || (movelist->src == dst && movelist->dst == src))
-      return true;
-  return false;
+#ifdef DEBUG
+  {
+    LOG("Liveness End\n");
+    FILE *debug_log = fopen("register.log", "a+");
+    livegraph.graph->Show(debug_log, livegraph.graph->Nodes(), TempGraphShow);
+    livegraph.moves->Print(debug_log);
+    fclose(debug_log);
+  }
+#endif
+  return livegraph;
 }
 
 TEMP::TempList *Union(TEMP::TempList *left, TEMP::TempList *right)
@@ -143,8 +187,8 @@ TEMP::TempList *Difference(TEMP::TempList *left, TEMP::TempList *right)
 
 bool Equal(TEMP::TempList *left, TEMP::TempList *right)
 {
-  for(; left; left = left->tail)
-    if(!Contain(right, left->head))
+  for(TEMP::TempList *list = left; list; list = list->tail)
+    if(!Contain(right, list->head))
       return false;
   for(; right; right = right->tail)
     if(!Contain(left, right->head))
@@ -158,6 +202,44 @@ bool Contain(TEMP::TempList *container, TEMP::Temp *temp)
     if(container->head == temp)
       return true;
   return false;
+}
+
+bool MoveList::contain(G::Node<TEMP::Temp>* src, G::Node<TEMP::Temp>* dst)
+{
+  for(MoveList *movelist = this; movelist; movelist = movelist->tail)
+    if((movelist->src == src && movelist->dst == dst)
+      || (movelist->src == dst && movelist->dst == src))
+      return true;
+  return false;
+}
+
+MoveList *MoveList::Intersect(MoveList *left, MoveList *right)
+{
+  MoveList *list = NULL;
+  for(; left; left = left->tail)
+    if(right->contain(left->src, left->dst))
+      list = new MoveList(left->src, left->dst, list);
+  return list;
+}
+
+MoveList *MoveList::Union(MoveList *left, MoveList *right)
+{
+  MoveList *list = NULL;
+  for(; left; left = left->tail)
+    list = new MoveList(left->src, left->dst, list);
+  for(; right; right = right->tail)
+    if(!list->contain(right->src, right->dst))
+      list = new MoveList(right->src, right->dst, list);
+  return list;
+}
+
+MoveList *MoveList::Difference(MoveList *left, MoveList *right)
+{
+  MoveList *list = NULL;
+  for(; left; left = left->tail)
+    if(!right->contain(left->src, left->dst))
+      list = new MoveList(left->src, left->dst, list);
+  return list;
 }
 
 }  // namespace LIVE
