@@ -228,7 +228,7 @@ TEMP::Temp *munchExp(T::Exp *exp)
     T::CallExp *e = (T::CallExp *)exp;
     munchArgs(e->args);
     sprintf(assem, "call %s", TEMP::LabelString(((T::NameExp *)e->fun)->name).c_str());
-    emit(new AS::OperInstr(std::string(assem), F::CallerSavedRegs(), NULL, NULL));
+    emit(new AS::OperInstr(std::string(assem), F::CallerSavedRegs(), new TEMP::TempList(F::RDI(), new TEMP::TempList(F::RSI(), new TEMP::TempList(F::RDX(), NULL))), NULL));
     emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(reg, NULL), new TEMP::TempList(F::RAX(), NULL)));
     // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RAX(), NULL), new TEMP::TempList(saved_rax, NULL)));
     // emit(new AS::MoveInstr("movq `s0, `d0", new TEMP::TempList(F::RDI(), NULL), new TEMP::TempList(saved_rdi, NULL)));

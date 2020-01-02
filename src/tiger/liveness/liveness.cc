@@ -1,6 +1,6 @@
 #include "tiger/liveness/liveness.h"
 
-#define DEBUG
+// #define DEBUG
 
 #define LOG(format, args...) do{            \
   FILE *debug_log = fopen("register.log", "a+"); \
