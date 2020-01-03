@@ -277,4 +277,16 @@ TEMP::TempList *CalleeSavedRegs()
   return templist;
 }
 
+TEMP::TempList *ArgRegs()
+{
+  static TEMP::TempList *templist = 
+    new TEMP::TempList(RDI(),
+    new TEMP::TempList(RSI(),
+    new TEMP::TempList(RDX(),
+    new TEMP::TempList(RCX(),
+    new TEMP::TempList(R8(),
+    new TEMP::TempList(R9(),NULL))))));
+  return templist;
+}
+
 }  // namespace F

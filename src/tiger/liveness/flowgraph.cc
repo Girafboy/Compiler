@@ -1,11 +1,17 @@
 #include "tiger/liveness/flowgraph.h"
 
-#define LOG(format, args...) do{            \
-  FILE *debug_log = fopen("register.log", "a+"); \
-  fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
-  fprintf(debug_log, format, ##args);       \
-  fclose(debug_log);\
-} while(0)
+// #define DEBUG
+
+#ifdef DEBUG
+  #define LOG(format, args...) do{            \
+    FILE *debug_log = fopen("register.log", "a+"); \
+    fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
+    fprintf(debug_log, format, ##args);       \
+    fclose(debug_log);\
+  } while(0)
+#else
+  #define LOG(format, args...) do{} while(0)
+#endif
 
 namespace FG {
 

@@ -165,7 +165,7 @@ TEMP::TempList *AllRegs();
 TEMP::TempList *AllRegs_noRSP();
 TEMP::TempList *CallerSavedRegs();
 TEMP::TempList *CalleeSavedRegs();
-
+TEMP::TempList *ArgRegs();
 }  // namespace F
 
 #endif

@@ -14,7 +14,7 @@
 #include "tiger/translate/tree.h"
 #include "tiger/regalloc/color.h"
 
-#define DEBUG
+// #define DEBUG
 
 FILE *debug_log;
 
@@ -30,9 +30,9 @@ TEMP::Map* temp_map;
 void do_proc(FILE* out, F::ProcFrag* procFrag) {
   temp_map = TEMP::Map::Empty();
   // Init temp_map
-  fprintf(debug_log, "doProc for function %s:\n", procFrag->frame->label->Name().c_str());
-  (new T::StmList(procFrag->body, NULL))->Print(debug_log);
-  fprintf(debug_log, "-------====IR tree=====-----\n");
+  // fprintf(debug_log, "doProc for function %s:\n", procFrag->frame->label->Name().c_str());
+  // (new T::StmList(procFrag->body, NULL))->Print(debug_log);
+  // fprintf(debug_log, "-------====IR tree=====-----\n");
 
   T::StmList* stmList = C::Linearize(procFrag->body);
   // stmList->Print(debug_log);
@@ -49,14 +49,14 @@ void do_proc(FILE* out, F::ProcFrag* procFrag) {
 
   // lab5&lab6: code generation
   AS::InstrList* iList = CG::Codegen(procFrag->frame, stmList); /* 9 */
-  iList->Print(debug_log, TEMP::Map::LayerMap(F::RegMap(), TEMP::Map::Name()));
-  fprintf(debug_log, "----======before RA=======-----\n");
+  // iList->Print(debug_log, TEMP::Map::LayerMap(F::RegMap(), TEMP::Map::Name()));
+  // fprintf(debug_log, "----======before RA=======-----\n");
 
   // lab6: register allocation
-  RA::Result allocation = COL::RegAlloc(procFrag->frame, iList); /* 11 */
+  RA::Result allocation = RA::RegAlloc(procFrag->frame, iList); /* 11 */
   // iList->Print(debug_log, allocation.coloring);
-  allocation.coloring->DumpMap(debug_log);
-  fprintf(debug_log, "----======after RA=======-----\n");
+  // allocation.coloring->DumpMap(debug_log);
+  // fprintf(debug_log, "----======after RA=======-----\n");
 
   AS::Proc* proc = F::F_procEntryExit3(procFrag->frame, allocation.il);
 
@@ -123,8 +123,8 @@ int main(int argc, char** argv) {
   /* convert the filename */
   sprintf(outfile, "%s.s", argv[1]);
   out = fopen(outfile, "w");
-  debug_log = fopen("main.log", "a+");
-  fprintf(debug_log, "testcase %s %s\n", argv[0], argv[1]);
+  // debug_log = fopen("main.log", "a+");
+  // fprintf(debug_log, "testcase %s %s\n", argv[0], argv[1]);
   fprintf(out, ".text\n");
   for (F::FragList* fragList = frags; fragList; fragList = fragList->tail)
     if (fragList->head->kind == F::Frag::Kind::PROC) {
@@ -138,6 +138,6 @@ int main(int argc, char** argv) {
     }
 
   fclose(out);
-  fclose(debug_log);
+  // fclose(debug_log);
   return 0;
 }

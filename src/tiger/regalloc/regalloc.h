@@ -5,6 +5,7 @@
 #include "tiger/frame/frame.h"
 #include "tiger/frame/temp.h"
 #include "tiger/codegen/codegen.h"
+#include "tiger/regalloc/color.h"
 
 namespace RA {
 
@@ -16,7 +17,8 @@ class Result {
 };
 
 Result RegAlloc(F::Frame* f, AS::InstrList* il);
-AS::InstrList *mapMapping(AS::InstrList *il, AS::InstrList *cur, F::Frame *f, TEMP::Map *destmap);
+
+AS::InstrList *RemoveMoveInstr(AS::InstrList *il, TEMP::Map *color);
 
 }  // namespace RA
 

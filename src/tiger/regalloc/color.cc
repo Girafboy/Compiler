@@ -2,12 +2,16 @@
 
 // #define DEBUG
 
-#define LOG(format, args...) do{            \
-  FILE *debug_log = fopen("register.log", "a+"); \
-  fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
-  fprintf(debug_log, format, ##args);       \
-  fclose(debug_log);\
-} while(0)
+#ifdef DEBUG
+  #define LOG(format, args...) do{            \
+    FILE *debug_log = fopen("register.log", "a+"); \
+    fprintf(debug_log, "%d,%s: ", __LINE__, __func__); \
+    fprintf(debug_log, format, ##args);       \
+    fclose(debug_log);\
+  } while(0)
+#else
+  #define LOG(format, args...) do{} while(0)
+#endif
 
 namespace COL {
 
@@ -82,11 +86,11 @@ TEMP::TempList *noSpillTemps;
 
 static LIVE::LiveGraph livegraph;
 
-Result Color(G::Graph<TEMP::Temp> ig, TEMP::Map initial, TEMP::TempList regs,
-             LIVE::MoveList* moves) {
-  // TODO: Put your codes here (lab6).
-  return Result();
-}
+// Result Color(G::Graph<TEMP::Temp> ig, TEMP::Map initial, TEMP::TempList regs,
+//              LIVE::MoveList* moves) {
+//   // TODO: Put your codes here (lab6).
+//   return Result();
+// }
 
 void ShowStatus()
 {
@@ -139,7 +143,7 @@ void ShowStatus()
 #endif
 }
 
-RA::Result RegAlloc(F::Frame* f, AS::InstrList* il)
+Result Color(F::Frame* f, AS::InstrList* il)
 {
   LOG("RegAlloc\n");
   bool done = true;
@@ -169,7 +173,7 @@ RA::Result RegAlloc(F::Frame* f, AS::InstrList* il)
     }
   }
   
-  return RA::Result(AssignRegisters(livegraph), il);
+  return Result(AssignRegisters(livegraph), il);
 }
 
 void Build()
@@ -363,13 +367,7 @@ void Coalesce()
   LOG("Coalesce\n");
   LOG("***************************Before Coalesce***************************\n");
   ShowStatus();
-
-  FILE *debug_log = fopen("register.log", "a+");
-  fprintf(debug_log, "worklistMoves: \n");
-  if(worklistMoves)
-    worklistMoves->Print(debug_log);
-  fclose(debug_log);
-
+  
   Node *x, *y, *u, *v;
   x = worklistMoves->src;
   y = worklistMoves->dst;
@@ -583,14 +581,8 @@ AS::InstrList * RewriteProgram(F::Frame *f, AS::InstrList *il)
     }
   }
   
-  for(AS::InstrList *instr = il; instr; instr = instr->tail)
-    if(instr->head->kind == AS::Instr::Kind::MOVE && ((AS::MoveInstr *)instr->head)->src && ((AS::MoveInstr *)instr->head)->dst
-      && ((AS::MoveInstr *)instr->head)->src->head == ((AS::MoveInstr *)instr->head)->dst->head)
-      instr->head = new AS::MoveInstr(std::string("# ").append(((AS::MoveInstr *)instr->head)->assem), NULL, NULL);
-  
   return il;
 }
-
 
 TEMP::Map * AssignRegisters(LIVE::LiveGraph g)
 {
@@ -603,8 +595,6 @@ TEMP::Map * AssignRegisters(LIVE::LiveGraph g)
   
   return TEMP::Map::LayerMap(F::RegMap(), res);
 }
-
-
 
 }  // namespace COL
 
