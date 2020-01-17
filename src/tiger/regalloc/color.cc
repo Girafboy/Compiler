@@ -425,11 +425,6 @@ void Freeze()
   LOG("***************************Before Freeze***************************\n");
   ShowStatus();
 
-  FILE *debug_log = fopen("register.log", "a+");
-  fprintf(debug_log, "freezeWorklist: \n");
-  livegraph.graph->Show(debug_log, freezeWorklist, TempGraphShow);
-  fclose(debug_log);
-
   Node *u = freezeWorklist->head;
   freezeWorklist = freezeWorklist->tail;
   simplifyWorklist = new NodeList(u, simplifyWorklist);
@@ -443,12 +438,6 @@ void SelectSpill()
 {
   LOG("***************************Before SelectSpill***************************\n");
   ShowStatus();
-
-  LOG("SelectSpill\n");
-  FILE *debug_log = fopen("register.log", "a+");
-  fprintf(debug_log, "spillWorklist: \n");
-  livegraph.graph->Show(debug_log, spillWorklist, TempGraphShow);
-  fclose(debug_log);
 
   Node *m = NULL;
   int maxweight = 0;

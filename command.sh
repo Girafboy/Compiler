@@ -18,3 +18,11 @@ make tiger-compiler
 # debug
 gdb build/tiger-compiler
 run build/testcases/bsearch.tig
+# GUI
+gdb build/tiger-compiler -tui
+layout regs
+layout disassemble
+# 下一条指令
+si
+# 跳转到一下函数
+next
