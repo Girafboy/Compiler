@@ -1,5 +1,13 @@
 # Tiger Compiler Labs in C++
 
+## Find Lab1 to Lab6?
+- [Lab1](../../tree/lab1)
+- [Lab2](../../tree/lab2)
+- [Lab3](../../tree/lab3)
+- [Lab4](../../tree/lab4)
+- [Lab5](../../tree/lab5)
+- [Lab6](../../tree/lab6)
+
 ## Contents
 
 - [Tiger Compiler Labs in C++](#tiger-compiler-labs-in-c)
